@@ -25,3 +25,44 @@ def test_detect_priority_playwright_over_api():
 def test_base_runner_is_abstract():
     with pytest.raises(TypeError):
         BaseRunner()
+
+def test_get_runner_unit():
+    from harness.skills.pytest_runner.pytest_runner import PytestRunner
+    from harness.skills.base_runner import get_runner
+    runner = get_runner("unit")
+    assert isinstance(runner, PytestRunner)
+    assert runner.mode == "unit"
+
+def test_get_runner_api():
+    from harness.skills.pytest_runner.pytest_runner import PytestRunner
+    from harness.skills.base_runner import get_runner
+    runner = get_runner("api")
+    assert isinstance(runner, PytestRunner)
+    assert runner.mode == "api"
+
+def test_get_runner_integration():
+    from harness.skills.pytest_runner.pytest_runner import PytestRunner
+    from harness.skills.base_runner import get_runner
+    runner = get_runner("integration")
+    assert isinstance(runner, PytestRunner)
+    assert runner.mode == "integration"
+
+def test_get_runner_e2e_ui():
+    from harness.skills.playwright_runner.playwright_runner import PlaywrightRunner
+    from harness.skills.base_runner import get_runner
+    runner = get_runner("e2e_ui")
+    assert isinstance(runner, PlaywrightRunner)
+
+def test_get_runner_unknown_falls_back_to_unit():
+    from harness.skills.pytest_runner.pytest_runner import PytestRunner
+    from harness.skills.base_runner import get_runner
+    runner = get_runner("unknown_type")
+    assert isinstance(runner, PytestRunner)
+    assert runner.mode == "unit"
+
+def test_get_runner_auto_falls_back_to_unit():
+    from harness.skills.pytest_runner.pytest_runner import PytestRunner
+    from harness.skills.base_runner import get_runner
+    runner = get_runner("auto")
+    assert isinstance(runner, PytestRunner)
+    assert runner.mode == "unit"

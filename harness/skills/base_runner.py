@@ -28,15 +28,14 @@ def detect_test_type(code: str) -> str:
     return "unit"
 
 
-def get_runner(test_type: str) -> BaseRunner:
+def get_runner(test_type: str) -> "BaseRunner":
     """根據 test_type 回傳對應 Runner，未知類型 fallback 到 unit。"""
     from harness.skills.pytest_runner.pytest_runner import PytestRunner
     from harness.skills.playwright_runner.playwright_runner import PlaywrightRunner
 
-    mapping = {
-        "unit": PytestRunner(mode="unit"),
-        "api": PytestRunner(mode="api"),
-        "integration": PytestRunner(mode="integration"),
-        "e2e_ui": PlaywrightRunner(),
-    }
-    return mapping.get(test_type, PytestRunner(mode="unit"))
+    if test_type == "e2e_ui":
+        return PlaywrightRunner()
+    elif test_type in ("unit", "api", "integration"):
+        return PytestRunner(mode=test_type)
+    else:
+        return PytestRunner(mode="unit")
