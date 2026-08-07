@@ -30,7 +30,10 @@ def evaluator_node(state: HarnessState) -> dict:
     if raw.endswith("```"):
         raw = raw.rsplit("```", 1)[0]
 
-    eval_result = json.loads(raw.strip())
+    try:
+        eval_result = json.loads(raw.strip())
+    except json.JSONDecodeError:
+        eval_result = {"is_success": False, "rating": 1, "feedback": f"LLM returned unparseable JSON: {raw[:200]}"}
     passed = test_passed and eval_result.get("is_success", False)
     feedback = eval_result.get("feedback", "")
     if not test_passed:
