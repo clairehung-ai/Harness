@@ -10,6 +10,7 @@ class Task(TypedDict):
     dependencies: list[int]
     expected_output: str
     test_cases: list[TestCase]
+    test_type: str  # "unit" | "api" | "integration" | "e2e_ui" | "auto"
 
 class TaskResult(TypedDict):
     task_id: int
