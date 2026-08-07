@@ -1,4 +1,4 @@
-import subprocess, tempfile, os
+import subprocess, tempfile, os, sys
 from harness.config import SANDBOX_TIMEOUT
 
 def run_tests(code: str, tests: str) -> dict:
@@ -9,7 +9,7 @@ def run_tests(code: str, tests: str) -> dict:
             f.write(tests)
         try:
             result = subprocess.run(
-                ["python", "-m", "pytest", "test_solution.py", "-v", "--tb=short"],
+                [sys.executable, "-m", "pytest", "test_solution.py", "-v", "--tb=short"],
                 capture_output=True, text=True,
                 timeout=SANDBOX_TIMEOUT, cwd=tmpdir,
             )
