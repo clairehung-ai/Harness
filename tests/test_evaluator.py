@@ -17,20 +17,67 @@ PASS_JSON = '{"is_success": true, "rating": 5, "feedback": "All good"}'
 FAIL_JSON = '{"is_success": false, "rating": 2, "feedback": "Missing error handling"}'
 
 def test_pass_when_tests_pass():
-    with patch("harness.agents.evaluator.run_tests", return_value={"success": True, "output": "1 passed"}):
+    from unittest.mock import MagicMock
+    mock_runner = MagicMock()
+    mock_runner.run.return_value = {"success": True, "output": "1 passed"}
+    with patch("harness.agents.evaluator.get_runner", return_value=mock_runner):
         with patch("harness.agents.evaluator.call_llm", return_value=PASS_JSON):
             result = evaluator_node(make_state())
     assert result["passed"] is True
 
 def test_fail_when_tests_fail():
-    with patch("harness.agents.evaluator.run_tests", return_value={"success": False, "output": "AssertionError"}):
+    from unittest.mock import MagicMock
+    mock_runner = MagicMock()
+    mock_runner.run.return_value = {"success": False, "output": "AssertionError"}
+    with patch("harness.agents.evaluator.get_runner", return_value=mock_runner):
         with patch("harness.agents.evaluator.call_llm", return_value=FAIL_JSON):
             result = evaluator_node(make_state())
     assert result["passed"] is False
     assert result["evaluator_feedback"] != ""
 
 def test_increments_round():
-    with patch("harness.agents.evaluator.run_tests", return_value={"success": True, "output": "1 passed"}):
+    from unittest.mock import MagicMock
+    mock_runner = MagicMock()
+    mock_runner.run.return_value = {"success": True, "output": "1 passed"}
+    with patch("harness.agents.evaluator.get_runner", return_value=mock_runner):
         with patch("harness.agents.evaluator.call_llm", return_value=PASS_JSON):
             result = evaluator_node(make_state(round=1))
     assert result["round"] == 2
+
+def test_evaluator_routes_to_skill_runner():
+    from unittest.mock import MagicMock
+    state = make_state()
+    state["tasks"][0]["test_type"] = "unit"
+    mock_runner = MagicMock()
+    mock_runner.run.return_value = {"success": True, "output": "1 passed"}
+    with patch("harness.agents.evaluator.get_runner", return_value=mock_runner):
+        with patch("harness.agents.evaluator.call_llm", return_value=PASS_JSON):
+            result = evaluator_node(state)
+    mock_runner.run.assert_called_once()
+    assert result["passed"] is True
+
+def test_evaluator_auto_detects():
+    from unittest.mock import MagicMock
+    state = make_state()
+    state["tasks"][0]["test_type"] = "auto"
+    state["current_code"] = "def add(a, b): return a + b"
+    mock_runner = MagicMock()
+    mock_runner.run.return_value = {"success": True, "output": "1 passed"}
+    with patch("harness.agents.evaluator.detect_test_type", return_value="unit") as mock_detect:
+        with patch("harness.agents.evaluator.get_runner", return_value=mock_runner):
+            with patch("harness.agents.evaluator.call_llm", return_value=PASS_JSON):
+                result = evaluator_node(state)
+    mock_detect.assert_called_once_with(state["current_code"])
+    assert result["passed"] is True
+
+def test_evaluator_missing_test_type_fallbacks():
+    from unittest.mock import MagicMock
+    state = make_state()
+    state["tasks"][0].pop("test_type", None)
+    mock_runner = MagicMock()
+    mock_runner.run.return_value = {"success": True, "output": "1 passed"}
+    with patch("harness.agents.evaluator.detect_test_type", return_value="unit"):
+        with patch("harness.agents.evaluator.get_runner", return_value=mock_runner):
+            with patch("harness.agents.evaluator.call_llm", return_value=PASS_JSON):
+                result = evaluator_node(state)
+    assert result["passed"] is True
