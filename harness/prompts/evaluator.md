@@ -118,6 +118,22 @@
 
 ---
 
+## 可用的測試 Skill
+
+系統根據任務 test_type 自動選擇對應 Skill 執行測試，並將結果提供給你評估。
+
+### Skill 1：pytest_runner
+- test_type = "unit"：純函式測試，from solution import <fn>
+- test_type = "api"：FastAPI TestClient 測試，from fastapi.testclient import TestClient
+- test_type = "integration"：跨模組、檔案 I/O、資料庫
+
+### Skill 2：playwright_runner
+- test_type = "e2e_ui"：HTML 頁面、JS 互動、前端 UI
+- 測試含 from playwright.sync_api import Page，函式接收 page: Page 參數
+- TimeoutError → 元素不存在；AssertionError → 內容不符
+
+---
+
 ## 輸入
 
 **原始任務描述：** {{task_description}}

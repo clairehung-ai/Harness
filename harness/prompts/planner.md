@@ -56,6 +56,7 @@
 | `dependencies` | int[] | ✓ | 此任務依賴的其他任務 id 清單。第一個任務必須為空陣列 `[]` |
 | `expected_output` | str | ✓ | 這個任務完成後應產生的產出物（例如：檔案名稱、函式名稱、類別名稱） |
 | `test_cases` | object[] | ✓ | 測試案例清單，Generator 會依此撰寫對應的 pytest 測試程式 |
+| `test_type` | str | ✓ | 測試類型：`"unit"` / `"api"` / `"integration"` / `"e2e_ui"` / `"auto"` |
 
 ### test_cases 欄位說明
 
@@ -71,6 +72,16 @@
 - 必須涵蓋正常情況（happy path）
 - 必須涵蓋邊緣情況（edge cases），例如：空值、空清單、負數
 - 必須涵蓋錯誤情況（error cases），例如：不合法輸入應拋出的例外
+
+### test_type 判斷規則
+
+| 任務特徵 | 填入值 |
+|---------|-------|
+| 純函式、工具類、計算邏輯 | `"unit"` |
+| FastAPI / Flask HTTP endpoint | `"api"` |
+| 多模組串接、sqlite3 / csv / open() | `"integration"` |
+| HTML 頁面、JavaScript、React 前端 | `"e2e_ui"` |
+| 不確定 | `"auto"` |
 
 ---
 
@@ -115,7 +126,8 @@
         "input": "numbers = [42]",
         "expected": "回傳 42.0"
       }
-    ]
+    ],
+    "test_type": "unit"
   }
 ]
 

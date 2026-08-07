@@ -6,9 +6,11 @@ def test_task_has_required_fields():
         "task_description": "do something",
         "dependencies": [],
         "expected_output": "a function",
-        "test_cases": [{"input": "x", "expected": "y"}]
+        "test_cases": [{"input": "x", "expected": "y"}],
+        "test_type": "unit"
     }
     assert task["id"] == 1
+    assert task["test_type"] == "unit"
 
 def test_task_result_has_required_fields():
     result: TaskResult = {
