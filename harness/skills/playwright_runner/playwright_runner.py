@@ -18,6 +18,16 @@ class PlaywrightRunner(BaseRunner):
             with open(os.path.join(tmpdir, "test_solution.py"), "w", encoding="utf-8") as f:
                 f.write(tests)
             try:
+                # Check pytest-playwright is available
+                check = subprocess.run(
+                    [sys.executable, "-m", "pytest", "--co", "-q", "--browser", "chromium", "test_solution.py"],
+                    capture_output=True, text=True, timeout=10, cwd=tmpdir,
+                )
+                if "unrecognized arguments" in check.stderr or "unrecognized arguments" in check.stdout:
+                    return {
+                        "success": False,
+                        "output": "playwright runner 錯誤: pytest-playwright 未安裝在當前 Python 環境。請執行：pip install pytest-playwright && python -m playwright install chromium"
+                    }
                 result = subprocess.run(
                     [sys.executable, "-m", "pytest", "test_solution.py", "-v", "--tb=short", "--browser", "chromium"],
                     capture_output=True, text=True,

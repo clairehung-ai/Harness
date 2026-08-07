@@ -1,4 +1,12 @@
+import subprocess, sys
+import pytest
 from harness.skills.playwright_runner.playwright_runner import PlaywrightRunner
+
+def _playwright_available():
+    r = subprocess.run([sys.executable, "-c", "import playwright"], capture_output=True)
+    return r.returncode == 0
+
+PLAYWRIGHT_AVAILABLE = _playwright_available()
 
 def test_is_html_true():
     runner = PlaywrightRunner()
@@ -21,6 +29,7 @@ def test_returns_required_keys():
     result = runner.run(code, tests)
     assert "success" in result and "output" in result
 
+@pytest.mark.skipif(not PLAYWRIGHT_AVAILABLE, reason="pytest-playwright not installed")
 def test_passing_html():
     runner = PlaywrightRunner()
     code = "<!DOCTYPE html><html><head><title>Hi</title></head><body><p id='msg'>Hello</p></body></html>"
@@ -34,6 +43,7 @@ def test_passing_html():
     result = runner.run(code, tests)
     assert result["success"] is True
 
+@pytest.mark.skipif(not PLAYWRIGHT_AVAILABLE, reason="pytest-playwright not installed")
 def test_failing_html():
     runner = PlaywrightRunner()
     code = "<!DOCTYPE html><html><head><title>Hi</title></head><body><p id='msg'>Hello</p></body></html>"
