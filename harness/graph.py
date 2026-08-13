@@ -29,7 +29,7 @@ def advance_task(state: HarnessState) -> dict:
         "rating": 0, "feedback": state["evaluator_feedback"],
     }
     new_completed_code = dict(state["completed_code"])
-    new_completed_code[str(task["id"])] = state["current_code"]
+    new_completed_code[task["output_filename"]] = state["current_code"]
     return {
         "current_task_index": state["current_task_index"] + 1,
         "round": 0, "evaluator_feedback": "",
