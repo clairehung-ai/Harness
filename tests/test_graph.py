@@ -1,6 +1,6 @@
-from harness.graph import build_graph, advance_task, route_after_evaluator
+from harness.graph import build_graph, advance_task, route_after_evaluator, route_after_red_light_check
 from harness.state import HarnessState
-from harness.config import MAX_ROUNDS
+from harness.config import MAX_ROUNDS, MAX_RED_LIGHT_ROUNDS
 
 def make_state(**kwargs) -> HarnessState:
     base: HarnessState = {
@@ -23,7 +23,7 @@ def test_route_pass_advances():
     assert route_after_evaluator(make_state(passed=True, round=1)) == "advance_task"
 
 def test_route_fail_retries():
-    assert route_after_evaluator(make_state(passed=False, round=1)) == "generator"
+    assert route_after_evaluator(make_state(passed=False, round=1)) == "code_writer"
 
 def test_route_max_rounds_forces_advance():
     assert route_after_evaluator(make_state(passed=False, round=MAX_ROUNDS)) == "advance_task"
@@ -40,3 +40,30 @@ def test_advance_task_updates_summary():
 
 def test_build_graph_returns_compiled_graph():
     assert build_graph() is not None
+
+def make_tdd_state(**kwargs):
+    base = make_state()
+    base["tdd_phase"] = "write_tests"
+    base["red_light_round"] = 0
+    base.update(kwargs)
+    return base
+
+def test_route_red_light_syntax_error_retries():
+    """red_light_round > 0 且 < MAX → 回到 test_writer"""
+    state = make_tdd_state(red_light_round=1, tdd_phase="write_tests")
+    assert route_after_red_light_check(state) == "test_writer"
+
+def test_route_red_light_max_rounds_forces_advance():
+    """red_light_round >= MAX → 強制進入 code_writer"""
+    state = make_tdd_state(red_light_round=MAX_RED_LIGHT_ROUNDS, tdd_phase="write_tests")
+    assert route_after_red_light_check(state) == "code_writer"
+
+def test_route_red_light_correct_red_light():
+    """red_light_round == 0，tdd_phase == write_code → code_writer"""
+    state = make_tdd_state(red_light_round=0, tdd_phase="write_code")
+    assert route_after_red_light_check(state) == "code_writer"
+
+def test_build_graph_has_tdd_nodes():
+    """graph 包含 test_writer、red_light_check、code_writer 節點"""
+    graph = build_graph()
+    assert graph is not None
