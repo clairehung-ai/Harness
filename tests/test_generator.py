@@ -1,5 +1,5 @@
 from unittest.mock import patch
-from harness.agents.generator import generator_node, test_writer_node, red_light_check_node
+from harness.agents.generator import generator_node, test_writer_node, red_light_check_node, code_writer_node
 from harness.state import HarnessState
 
 def make_state(test_type: str = "unit") -> HarnessState:
@@ -116,3 +116,35 @@ def test_red_light_check_weak_tests():
     assert result["tdd_phase"] == "write_code"
     assert result["red_light_round"] == 0
     assert "警告" in result["evaluator_feedback"]
+
+MOCK_CODE_ONLY = "```implementation\ndef add(a, b):\n    return a + b\n```"
+
+def test_code_writer_returns_code_only():
+    """code_writer_node 只產出 current_code，不改 current_tests"""
+    state = make_state()
+    state["current_tests"] = "from solution import add\ndef test_add():\n    assert add(1,2)==3\n"
+    with patch("harness.agents.generator.call_code_writer_llm", return_value=MOCK_CODE_ONLY):
+        result = code_writer_node(state)
+    assert "def add" in result["current_code"]
+    assert result["tdd_phase"] == "write_code"
+    assert "current_tests" not in result  # 不改動 current_tests
+
+def test_code_writer_injects_current_tests_into_prompt():
+    """current_tests 被注入 prompt"""
+    state = make_state()
+    state["current_tests"] = "from solution import add\ndef test_add(): assert add(1,2)==3\n"
+    captured = []
+    def capture(prompt):
+        captured.append(prompt)
+        return MOCK_CODE_ONLY
+    with patch("harness.agents.generator.call_code_writer_llm", side_effect=capture):
+        code_writer_node(state)
+    assert "from solution import add" in captured[0]
+    assert "{{current_tests}}" not in captured[0]
+
+def test_code_writer_strips_fences():
+    state = make_state()
+    state["current_tests"] = "def test_f(): pass\n"
+    with patch("harness.agents.generator.call_code_writer_llm", return_value=MOCK_CODE_ONLY):
+        result = code_writer_node(state)
+    assert "```" not in result["current_code"]
