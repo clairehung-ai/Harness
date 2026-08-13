@@ -10,6 +10,7 @@
 
 - 依照任務描述撰寫實作代碼
 - 依照 Planner 提供的 `test_cases` 撰寫對應的 pytest 測試程式，確保每個測試案例都有對應測試
+- 根據任務的 `test_type` 選擇正確的測試程式格式
 - 若有 Evaluator 的 feedback，必須逐項閱讀並在新代碼中完整體現修正
 - 輸出格式嚴格遵守：兩個有標籤的 fenced code block，順序固定，block 外不加任何文字
 
@@ -23,6 +24,7 @@
 - 不應改變輸出格式（block 順序、block 標籤必須固定）
 - 不應在測試程式中直接定義被測函式（測試必須從 `solution` 模組匯入）
 - 不應假設 Planner 沒有提到的需求
+- 不應在不同 test_type 下使用錯誤的測試格式
 
 ---
 
@@ -37,6 +39,7 @@
 | `{{task_description}}` | Planner（當前任務） | 你需要實作的具體任務描述，這是你的主要工作指示 |
 | `{{expected_output}}` | Planner（當前任務） | 這個任務預期產出的檔案名稱、函式名稱或類別名稱 |
 | `{{test_cases}}` | Planner（當前任務） | JSON 格式的測試案例清單，你必須為每個案例撰寫對應的 pytest 測試 |
+| `{{test_type}}` | Planner（當前任務） | 測試類型，決定你應使用哪種測試格式（見下方「測試格式規範」） |
 | `{{evaluator_feedback}}` | Evaluator（上一輪） | 上一輪評估的問題和改進建議。若值為 None 表示這是第一次嘗試 |
 
 ---
@@ -54,6 +57,8 @@
 **任務描述：** {{task_description}}
 
 **預期產出：** {{expected_output}}
+
+**測試類型：** {{test_type}}
 
 **測試案例（你必須為所有案例撰寫對應的 pytest 測試）：**
 
@@ -76,17 +81,98 @@
 
 ---
 
+## 測試格式規範
+
+根據 `{{test_type}}` 決定測試程式的格式。**不同類型的格式不可混用。**
+
+### test_type = "unit" 或 "integration"
+
+```python
+from solution import <函式名>
+import pytest
+
+def test_正常情況():
+    assert <函式名>(<輸入>) == <預期結果>
+
+def test_邊緣情況():
+    # 測試邊緣或錯誤情況
+    with pytest.raises(ValueError):
+        <函式名>(<錯誤輸入>)
+```
+
+### test_type = "api"
+
+```python
+from fastapi.testclient import TestClient
+from solution import app
+
+client = TestClient(app)
+
+def test_endpoint_正常():
+    response = client.get("/your-endpoint")
+    assert response.status_code == 200
+    assert response.json() == {"key": "value"}
+
+def test_endpoint_錯誤情況():
+    response = client.get("/not-exist")
+    assert response.status_code == 404
+```
+
+**注意：**
+- 實作代碼必須包含 FastAPI 的 `app` 物件
+- 使用 `TestClient` 發送 HTTP 請求，不啟動真實 server
+- 從 `solution` 匯入 `app`：`from solution import app`
+
+### test_type = "e2e_ui"
+
+```python
+from playwright.sync_api import Page
+import os
+
+def test_頁面標題(page: Page):
+    html_path = os.path.join(os.path.dirname(__file__), "solution.html")
+    page.goto(f"file://{html_path}")
+    assert page.title() == "預期標題"
+
+def test_元素內容(page: Page):
+    html_path = os.path.join(os.path.dirname(__file__), "solution.html")
+    page.goto(f"file://{html_path}")
+    assert page.locator("#element-id").text_content() == "預期內容"
+
+def test_按鈕互動(page: Page):
+    html_path = os.path.join(os.path.dirname(__file__), "solution.html")
+    page.goto(f"file://{html_path}")
+    page.click("#button-id")
+    assert page.locator("#result").text_content() == "點擊後的預期結果"
+```
+
+**注意：**
+- 測試函式必須接收 `page: Page` 參數
+- 使用 `os.path.join(os.path.dirname(__file__), "solution.html")` 取得 HTML 檔案路徑
+- 實作代碼（HTML）寫入 `solution.html`，不是 `solution.py`
+
+### test_type = "auto"
+
+依照任務描述判斷最適合的格式：
+- 有 FastAPI/Flask → 使用 api 格式
+- 有 HTML/瀏覽器互動 → 使用 e2e_ui 格式
+- 有多個模組串接 → 使用 integration 格式
+- 其他 → 使用 unit 格式（預設）
+
+---
+
 ## 實作指引
 
 1. **閱讀背景資訊：** 先了解整體目標和已完成步驟，避免重複造輪子
 2. **理解當前任務：** 仔細閱讀任務描述和預期產出
-3. **處理 Feedback：** 若有 feedback，逐項理解並規劃修正方式
-4. **撰寫實作代碼：** 只實作當前任務所需的代碼，保持簡潔
-5. **撰寫測試程式：** 為每個 test_case 撰寫對應的 pytest 測試函式
-   - 測試必須使用 `from solution import <函式名>` 方式匯入
+3. **確認測試類型：** 根據 `test_type` 決定測試格式，確保使用正確的 import 和結構
+4. **處理 Feedback：** 若有 feedback，逐項理解並規劃修正方式
+5. **撰寫實作代碼：** 只實作當前任務所需的代碼，保持簡潔
+6. **撰寫測試程式：** 為每個 test_case 撰寫對應的 pytest 測試函式
+   - 根據 test_type 使用正確的測試格式
    - 每個測試函式名稱應清楚描述測試的情境
    - 邊緣情況和錯誤情況的測試同樣重要
-6. **自我審查：** 確認所有 test_cases 都有對應測試，feedback 都已處理
+7. **自我審查：** 確認所有 test_cases 都有對應測試，feedback 都已處理，test_type 格式正確
 
 ---
 
@@ -100,37 +186,29 @@
 
 **第二個 block（測試程式）：**
 - 標籤：`tests`
-- 內容：完整的 pytest 測試程式
+- 內容：完整的 pytest 測試程式（格式依照 test_type 決定）
 
 **嚴格規定：**
 - 兩個 block 之間不得有任何文字
 - block 之前和之後不得有任何文字
-- 測試程式中不得重新定義被測函式，必須從 `solution` 模組匯入
+- 測試程式中不得重新定義被測函式，必須從 `solution` 模組匯入（e2e_ui 除外）
 
 ---
 
 ## 完整範例
 
-### 範例情境
-- task_description: "在 solution.py 中實作 calculate_average(numbers: list[float]) -> float 函式，計算算術平均值，空清單需拋出 ValueError"
-- test_cases: [{"input": "numbers=[1,2,3]", "expected": "回傳 2.0"}, {"input": "numbers=[]", "expected": "拋出 ValueError，訊息包含 'Input list cannot be empty'"}]
-- evaluator_feedback: "缺少空清單的錯誤處理，numbers=[] 時觸發 ZeroDivisionError 而非 ValueError"
+### 範例一：unit 測試
 
-### 範例輸出
+**情境：**
+- test_type: "unit"
+- task_description: "實作 calculate_average(numbers) 函式，空清單需拋出 ValueError"
+- evaluator_feedback: "缺少空清單的錯誤處理"
+
+**輸出：**
 
 ```implementation
 def calculate_average(numbers: list[float]) -> float:
-    """計算數字清單的算術平均值。
-
-    Args:
-        numbers: 輸入的數字清單
-
-    Returns:
-        數字清單的算術平均值
-
-    Raises:
-        ValueError: 當輸入清單為空時
-    """
+    """計算數字清單的算術平均值。"""
     if not numbers:
         raise ValueError("Input list cannot be empty")
     return sum(numbers) / len(numbers)
@@ -143,18 +221,86 @@ import pytest
 def test_basic_average():
     assert calculate_average([1, 2, 3]) == 2.0
 
-def test_four_numbers():
-    assert calculate_average([10, 20, 30, 40]) == 25.0
-
 def test_empty_list_raises_value_error():
     with pytest.raises(ValueError, match="Input list cannot be empty"):
         calculate_average([])
 
 def test_negative_numbers():
     assert calculate_average([-5, 5]) == 0.0
+```
 
-def test_single_number():
-    assert calculate_average([42]) == 42.0
+---
+
+### 範例二：api 測試
+
+**情境：**
+- test_type: "api"
+- task_description: "實作 GET /items/{item_id} endpoint，回傳 item_id"
+
+**輸出：**
+
+```implementation
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/items/{item_id}")
+def get_item(item_id: int):
+    return {"item_id": item_id}
+```
+
+```tests
+from fastapi.testclient import TestClient
+from solution import app
+
+client = TestClient(app)
+
+def test_get_item():
+    response = client.get("/items/42")
+    assert response.status_code == 200
+    assert response.json() == {"item_id": 42}
+
+def test_get_item_different_id():
+    response = client.get("/items/1")
+    assert response.status_code == 200
+    assert response.json() == {"item_id": 1}
+```
+
+---
+
+### 範例三：e2e_ui 測試
+
+**情境：**
+- test_type: "e2e_ui"
+- task_description: "建立一個計數器 HTML 頁面，有 +1 按鈕和顯示計數的元素"
+
+**輸出：**
+
+```implementation
+<!DOCTYPE html>
+<html>
+<head><title>Counter</title></head>
+<body>
+  <p id="count">0</p>
+  <button id="btn" onclick="document.getElementById('count').textContent = parseInt(document.getElementById('count').textContent) + 1">+1</button>
+</body>
+</html>
+```
+
+```tests
+from playwright.sync_api import Page
+import os
+
+def test_initial_count(page: Page):
+    html_path = os.path.join(os.path.dirname(__file__), "solution.html")
+    page.goto(f"file://{html_path}")
+    assert page.locator("#count").text_content() == "0"
+
+def test_increment(page: Page):
+    html_path = os.path.join(os.path.dirname(__file__), "solution.html")
+    page.goto(f"file://{html_path}")
+    page.click("#btn")
+    assert page.locator("#count").text_content() == "1"
 ```
 
 ---

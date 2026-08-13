@@ -30,6 +30,7 @@ def generator_node(state: HarnessState) -> dict:
         .replace("{{task_description}}", task["task_description"])
         .replace("{{expected_output}}", task["expected_output"])
         .replace("{{test_cases}}", json.dumps(task["test_cases"], indent=2))
+        .replace("{{test_type}}", task.get("test_type", "unit"))
         .replace("{{evaluator_feedback}}", state["evaluator_feedback"] or "None")
     )
     raw = call_llm(prompt)
