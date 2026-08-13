@@ -15,6 +15,7 @@ def make_state(**kwargs) -> HarnessState:
         "current_code": "def add(a,b): return a+b",
         "current_tests": "from solution import add\ndef test_add(): assert add(1,2)==3",
         "evaluator_feedback": "", "passed": True, "round": 1, "task_results": [],
+        "completed_code": {},
     }
     base.update(kwargs)
     return base
@@ -67,3 +68,22 @@ def test_build_graph_has_tdd_nodes():
     """graph 包含 test_writer、red_light_check、code_writer 節點"""
     graph = build_graph()
     assert graph is not None
+
+def test_advance_task_stores_completed_code():
+    """advance_task 應將 current_code 存入 completed_code"""
+    state = make_tdd_state(current_task_index=0, passed=True)
+    state["completed_code"] = {}
+    state["current_code"] = "def add(a, b):\n    return a + b\n"
+    result = advance_task(state)
+    assert "1" in result["completed_code"]
+    assert "def add" in result["completed_code"]["1"]
+
+def test_advance_task_accumulates_completed_code():
+    """advance_task 應保留前面 task 的 completed_code"""
+    state = make_tdd_state(current_task_index=1, passed=True)
+    state["completed_code"] = {"1": "def add(a, b): return a + b"}
+    state["current_code"] = "def multiply(a, b):\n    return a * b\n"
+    result = advance_task(state)
+    assert "1" in result["completed_code"]
+    assert "2" in result["completed_code"]
+    assert "def multiply" in result["completed_code"]["2"]

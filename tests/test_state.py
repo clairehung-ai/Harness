@@ -50,3 +50,18 @@ def test_harness_state_has_tdd_fields():
 def test_config_has_max_red_light_rounds():
     from harness.config import MAX_RED_LIGHT_ROUNDS
     assert MAX_RED_LIGHT_ROUNDS == 2
+
+def test_harness_state_has_completed_code():
+    from harness.state import HarnessState
+    state: HarnessState = {
+        "input": "test", "overall_goal": "test",
+        "tasks": [], "current_task_index": 0,
+        "completed_steps_summary": "",
+        "current_code": "", "current_tests": "",
+        "evaluator_feedback": "", "passed": False,
+        "round": 0, "task_results": [],
+        "tdd_phase": "write_tests", "red_light_round": 0,
+        "completed_code": {},
+    }
+    assert state["completed_code"] == {}
+    assert isinstance(state["completed_code"], dict)
