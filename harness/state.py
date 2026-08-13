@@ -32,3 +32,5 @@ class HarnessState(TypedDict):
     passed: bool
     round: int
     task_results: list[TaskResult]
+    tdd_phase: str        # "write_tests" | "write_code"
+    red_light_round: int  # test_writer 重試次數
