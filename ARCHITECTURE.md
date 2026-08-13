@@ -246,3 +246,114 @@ build a Python utility that reads a CSV file and returns summary statistics
 | `test_smoke.py` | 完整 pipeline E2E |
 
 **總計：51 passed（2 playwright skipped when not installed）**
+
+---
+
+## 已知缺口與改進建議
+
+目前系統可以跑通完整的 TDD 循環，但在走向真實專案使用前，以下是評估後發現的缺口，依優先順序排列。
+
+### 🔴 高優先
+
+#### 1. 多檔案管理
+
+**問題：** Generator 目前所有產出都寫入 `solution.py` 一個檔案。真實專案需要多個檔案（`models.py`、`services.py`、`api.py` 等）。
+
+**影響：** 無法處理跨越多個模組的任務，任務複雜度受限。
+
+**建議方向：**
+- `Task` 新增 `output_files: list[str]` 欄位
+- Generator 產出改為多個 fenced block，每個對應一個檔案
+- sandbox runner 支援寫入多個檔案到 tempdir
+
+---
+
+#### 2. code_writer 看不到已產出的代碼
+
+**問題：** `completed_steps_summary` 只有文字摘要，不包含實際代碼。code_writer 在 Task 2 時不知道 Task 1 產出了什麼函式，可能重複實作。
+
+**影響：** 多 task 的專案容易出現重複代碼或不一致的介面。
+
+**建議方向：**
+- `HarnessState` 新增 `completed_code: dict[str, str]`（filename → code）
+- `advance_task` 將當前 task 的代碼存入 `completed_code`
+- `code_writer.md` 的 prompt 注入 `{{completed_code}}`
+
+---
+
+### 🟡 中優先
+
+#### 3. Logging（可觀測性）
+
+**問題：** Pipeline 跑完只有最終 `task_results`，中間每輪的 tests / code / feedback 全部消失。
+
+**影響：** 無法 debug、無法分析系統行為、無法改善 prompt 品質。
+
+**建議方向：**
+- 每輪結束後寫入 `harness_run_<timestamp>.jsonl`
+- 記錄：task_id、round、tdd_phase、current_tests、current_code、evaluator_feedback、passed
+- 提供簡單的 `harness/utils/log_reader.py` 解析 log
+
+---
+
+#### 4. 依賴順序執行（拓撲排序）
+
+**問題：** `Task.dependencies` 欄位有定義，但 Orchestrator 目前按 `id` 順序執行，沒有做拓撲排序。
+
+**影響：** 如果 Task 3 依賴 Task 5，系統不會正確處理執行順序。
+
+**建議方向：**
+- `planner_node` 或 `graph.py` 在執行前對 tasks 做拓撲排序
+- 若有循環依賴，提早失敗並回報錯誤
+
+---
+
+#### 5. 錯誤恢復與報告
+
+**問題：** 超過 `MAX_ROUNDS` 時是「強制通過」，沒有清楚通知哪個 task 失敗、原因是什麼。
+
+**影響：** 使用者拿到結果不知道品質，無法判斷是否需要人工介入。
+
+**建議方向：**
+- `TaskResult` 新增 `forced: bool`（是否強制通過）
+- `run_harness()` 結果包含整體摘要：通過幾個、強制通過幾個、失敗原因
+- 輸出格式改為結構化 JSON，方便後續處理
+
+---
+
+### 🟢 低優先
+
+#### 6. Human-in-the-loop
+
+**問題：** 系統完全自動，但某些情況應該讓人介入：Planner 拆出明顯錯誤的任務、code_writer 多輪都失敗、Evaluator rating 持續偏低。
+
+**建議方向：**
+- 可設定 `HUMAN_IN_LOOP = True` 模式
+- 每個 task 結束後暫停，顯示結果等待確認
+- 低 rating（< 3）時自動暫停請求人工指引
+
+---
+
+#### 7. README
+
+**問題：** 目前沒有 README，新使用者不知道如何安裝、設定 `OPENAI_API_KEY`、執行第一個任務。
+
+**需要涵蓋：**
+- 安裝依賴（`pip install -r requirements.txt`）
+- 設定環境變數（`OPENAI_API_KEY`）
+- 執行方式（`python -m harness.main "你的需求"`）
+- 架構簡介（指向 ARCHITECTURE.md）
+
+---
+
+## 改進優先順序總覽
+
+| 優先級 | 功能 | 影響範圍 |
+|--------|------|---------|
+| 🔴 高 | 多檔案管理 | Generator、sandbox、state |
+| 🔴 高 | code_writer 看到已產出代碼 | state、graph、prompt |
+| 🟡 中 | Logging | 新增 utils/logger.py |
+| 🟡 中 | 依賴順序執行 | graph.py |
+| 🟡 中 | 錯誤恢復與報告 | state、main.py |
+| 🟢 低 | Human-in-the-loop | config、graph |
+| 🟢 低 | README | 新增檔案 |
