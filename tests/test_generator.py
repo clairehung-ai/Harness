@@ -1,5 +1,5 @@
 from unittest.mock import patch
-from harness.agents.generator import generator_node, test_writer_node
+from harness.agents.generator import generator_node, test_writer_node, red_light_check_node
 from harness.state import HarnessState
 
 def make_state(test_type: str = "unit") -> HarnessState:
@@ -77,3 +77,42 @@ def test_test_writer_injects_red_light_feedback():
     with patch("harness.agents.generator.call_test_writer_llm", side_effect=capture):
         test_writer_node(state)
     assert "SyntaxError on line 3" in captured[0]
+
+def test_red_light_check_correct_red_light():
+    """ImportError = 正確紅燈，進入 write_code"""
+    state = make_state()
+    state["current_tests"] = "from solution import add\ndef test_add():\n    assert add(1,2)==3\n"
+    state["red_light_round"] = 0
+    mock_run = {"success": False, "output": "ImportError: No module named 'solution'"}
+    with patch("harness.agents.generator.get_runner") as mock_get:
+        mock_get.return_value.run.return_value = mock_run
+        result = red_light_check_node(state)
+    assert result["tdd_phase"] == "write_code"
+    assert result["red_light_round"] == 0
+    assert result["evaluator_feedback"] == ""
+
+def test_red_light_check_syntax_error():
+    """SyntaxError = tests 寫壞，增加 red_light_round"""
+    state = make_state()
+    state["current_tests"] = "def test_bad(\n    pass\n"
+    state["red_light_round"] = 0
+    mock_run = {"success": False, "output": "SyntaxError: invalid syntax"}
+    with patch("harness.agents.generator.get_runner") as mock_get:
+        mock_get.return_value.run.return_value = mock_run
+        result = red_light_check_node(state)
+    assert result["red_light_round"] == 1
+    assert "SyntaxError" in result["evaluator_feedback"]
+    assert "tdd_phase" not in result
+
+def test_red_light_check_weak_tests():
+    """所有測試通過（弱測試），記錄警告並繼續"""
+    state = make_state()
+    state["current_tests"] = "def test_always_pass():\n    assert True\n"
+    state["red_light_round"] = 0
+    mock_run = {"success": True, "output": "1 passed"}
+    with patch("harness.agents.generator.get_runner") as mock_get:
+        mock_get.return_value.run.return_value = mock_run
+        result = red_light_check_node(state)
+    assert result["tdd_phase"] == "write_code"
+    assert result["red_light_round"] == 0
+    assert "警告" in result["evaluator_feedback"]

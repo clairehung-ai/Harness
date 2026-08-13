@@ -1,8 +1,9 @@
 import re, json
 from pathlib import Path
 from langchain_openai import ChatOpenAI
-from harness.config import MODEL
+from harness.config import MODEL, MAX_RED_LIGHT_ROUNDS
 from harness.state import HarnessState
+from harness.skills.base_runner import detect_test_type, get_runner
 
 def _load_prompt() -> str:
     return (Path(__file__).parent.parent / "prompts" / "generator.md").read_text(encoding="utf-8")
@@ -64,3 +65,32 @@ def test_writer_node(state: HarnessState) -> dict:
     }
 
 test_writer_node.__test__ = False  # prevent pytest from collecting this as a test
+
+def red_light_check_node(state: HarnessState) -> dict:
+    """驗證 test_writer 產出的測試是否為「正確的紅燈」。不呼叫 LLM。"""
+    task = state["tasks"][state["current_task_index"]]
+    test_type = task.get("test_type", "auto")
+    if test_type == "auto":
+        test_type = detect_test_type(state["current_tests"])
+
+    runner = get_runner(test_type)
+    run_result = runner.run(code="", tests=state["current_tests"])
+    output = run_result["output"]
+
+    if "SyntaxError" in output:
+        return {
+            "red_light_round": state["red_light_round"] + 1,
+            "evaluator_feedback": f"測試程式有語法錯誤，請修正：{output[:500]}",
+        }
+    elif run_result["success"]:
+        return {
+            "tdd_phase": "write_code",
+            "red_light_round": 0,
+            "evaluator_feedback": "⚠️ 警告：測試在沒有實作代碼的情況下全部通過，測試可能太弱。",
+        }
+    else:
+        return {
+            "tdd_phase": "write_code",
+            "red_light_round": 0,
+            "evaluator_feedback": "",
+        }
