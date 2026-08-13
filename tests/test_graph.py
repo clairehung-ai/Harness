@@ -46,6 +46,7 @@ def make_tdd_state(**kwargs):
     base = make_state()
     base["tdd_phase"] = "write_tests"
     base["red_light_round"] = 0
+    base["completed_code"] = {}
     base.update(kwargs)
     return base
 
