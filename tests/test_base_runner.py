@@ -66,3 +66,12 @@ def test_get_runner_auto_falls_back_to_unit():
     runner = get_runner("auto")
     assert isinstance(runner, PytestRunner)
     assert runner.mode == "unit"
+
+def test_base_runner_run_signature_accepts_completed_code_and_output_filename():
+    """BaseRunner.run() 簽名接受 completed_code 和 output_filename 參數"""
+    import inspect
+    from harness.skills.base_runner import BaseRunner
+    sig = inspect.signature(BaseRunner.run)
+    params = list(sig.parameters.keys())
+    assert "completed_code" in params
+    assert "output_filename" in params

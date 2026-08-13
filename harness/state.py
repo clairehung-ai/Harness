@@ -9,6 +9,7 @@ class Task(TypedDict):
     task_description: str
     dependencies: list[int]
     expected_output: str
+    output_filename: str   # 新增：例如 "models.py"、"api.py"、"solution.py"
     test_cases: list[TestCase]
     test_type: str  # "unit" | "api" | "integration" | "e2e_ui" | "auto"
 
@@ -34,4 +35,4 @@ class HarnessState(TypedDict):
     task_results: list[TaskResult]
     tdd_phase: str        # "write_tests" | "write_code"
     red_light_round: int  # test_writer 重試次數
-    completed_code: dict  # {str(task_id): code_str} 已完成 task 的代碼
+    completed_code: dict  # {filename: code_str}，key 為檔名

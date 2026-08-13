@@ -178,3 +178,19 @@ def test_code_writer_empty_completed_code_shows_none():
         code_writer_node(state)
     assert "None" in captured[0]
     assert "{{completed_code}}" not in captured[0]
+
+def test_red_light_check_passes_completed_code_to_runner():
+    """red_light_check 應把 completed_code 和 output_filename 傳給 runner"""
+    from unittest.mock import MagicMock
+    state = make_state()
+    state["tasks"][0]["output_filename"] = "services.py"
+    state["current_tests"] = "from solution import f\ndef test_f(): assert f()==1\n"
+    state["completed_code"] = {"models.py": "class User: pass"}
+    state["red_light_round"] = 0
+    mock_runner = MagicMock()
+    mock_runner.run.return_value = {"success": False, "output": "ImportError"}
+    with patch("harness.agents.generator.get_runner", return_value=mock_runner):
+        red_light_check_node(state)
+    call_kwargs = mock_runner.run.call_args
+    assert call_kwargs.kwargs.get("completed_code") == {"models.py": "class User: pass"} or \
+           (len(call_kwargs.args) >= 3 and call_kwargs.args[2] == {"models.py": "class User: pass"})

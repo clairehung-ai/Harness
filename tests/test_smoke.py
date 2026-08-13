@@ -1,7 +1,7 @@
 from unittest.mock import patch
 from harness.main import run_harness
 
-MOCK_PLANNER = '[{"id":1,"task_description":"implement add(a,b)","dependencies":[],"expected_output":"add fn","test_cases":[{"input":"1,2","expected":"3"}],"test_type":"unit"}]'
+MOCK_PLANNER = '[{"id":1,"task_description":"implement add(a,b)","dependencies":[],"expected_output":"add fn","output_filename":"solution.py","test_cases":[{"input":"1,2","expected":"3"}],"test_type":"unit"}]'
 MOCK_TESTS = "```tests\nfrom solution import add\ndef test_add():\n    assert add(1, 2) == 3\n```"
 MOCK_CODE = "```implementation\ndef add(a, b):\n    return a + b\n```"
 MOCK_EVALUATOR = '{"is_success": true, "rating": 5, "feedback": "All tests pass."}'

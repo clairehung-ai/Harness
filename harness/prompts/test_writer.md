@@ -31,6 +31,8 @@
 
 **測試類型：** {{test_type}}
 
+**輸出檔名：** {{output_filename}}
+
 **測試案例（必須全部覆蓋）：**
 {{test_cases}}
 
@@ -38,6 +40,14 @@
 {{red_light_feedback}}
 
 ---
+
+## 重要：import 路徑說明
+
+- **當前 task 的代碼** 寫入 `{{output_filename}}`，測試匯入時用去掉 .py 的模組名
+  - 例如：output_filename = "services.py" → `from services import get_user`
+  - 例如：output_filename = "solution.py" → `from solution import add`
+- **已完成 task 的代碼** 可直接 import（檔案已在 sandbox 中）
+  - 例如：`from models import User`（若 Task 1 的 output_filename = "models.py"）
 
 ## 測試格式規範
 

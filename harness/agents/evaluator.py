@@ -24,7 +24,12 @@ def evaluator_node(state: HarnessState) -> dict:
 
     # 2. 選擇 Skill Runner 並執行測試
     runner = get_runner(test_type)
-    run_result = runner.run(state["current_code"], state["current_tests"])
+    run_result = runner.run(
+        state["current_code"],
+        state["current_tests"],
+        completed_code=state.get("completed_code", {}),
+        output_filename=task.get("output_filename", "solution.py"),
+    )
     test_passed = run_result["success"]
     test_output = run_result["output"]
 

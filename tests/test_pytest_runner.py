@@ -71,3 +71,27 @@ def test_invalid_mode_raises():
     import pytest
     with pytest.raises(ValueError):
         PytestRunner(mode="invalid")
+
+def test_completed_code_files_available_in_sandbox():
+    """completed_code 的檔案應在 tempdir 中可被 import"""
+    runner = PytestRunner(mode="integration")
+    # models.py 是已完成的代碼
+    completed = {"models.py": "class User:\n    def __init__(self, name):\n        self.name = name\n"}
+    # 當前代碼是 services.py，import models
+    code = "from models import User\ndef get_user(name):\n    return User(name)\n"
+    tests = (
+        "from solution import get_user\n"
+        "def test_get_user():\n"
+        "    user = get_user('alice')\n"
+        "    assert user.name == 'alice'\n"
+    )
+    result = runner.run(code, tests, completed_code=completed, output_filename="solution.py")
+    assert result["success"] is True
+
+def test_output_filename_used_for_current_code():
+    """output_filename 決定當前代碼寫入的檔名"""
+    runner = PytestRunner(mode="unit")
+    code = "class Foo:\n    pass\n"
+    tests = "from mymodule import Foo\ndef test_foo():\n    assert Foo() is not None\n"
+    result = runner.run(code, tests, output_filename="mymodule.py")
+    assert result["success"] is True

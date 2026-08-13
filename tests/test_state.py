@@ -6,11 +6,24 @@ def test_task_has_required_fields():
         "task_description": "do something",
         "dependencies": [],
         "expected_output": "a function",
+        "output_filename": "solution.py",
         "test_cases": [{"input": "x", "expected": "y"}],
         "test_type": "unit"
     }
     assert task["id"] == 1
     assert task["test_type"] == "unit"
+
+def test_task_has_output_filename():
+    task: Task = {
+        "id": 1,
+        "task_description": "build User model",
+        "dependencies": [],
+        "expected_output": "models.py with User class",
+        "output_filename": "models.py",
+        "test_cases": [{"input": "User('alice')", "expected": "User object"}],
+        "test_type": "unit"
+    }
+    assert task["output_filename"] == "models.py"
 
 def test_task_result_has_required_fields():
     result: TaskResult = {

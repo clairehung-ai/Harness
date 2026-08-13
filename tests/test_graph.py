@@ -7,9 +7,11 @@ def make_state(**kwargs) -> HarnessState:
         "input": "build add", "overall_goal": "build add",
         "tasks": [
             {"id": 1, "task_description": "implement add", "dependencies": [],
-             "expected_output": "add fn", "test_cases": [{"input": "1,2", "expected": "3"}]},
+             "expected_output": "add fn", "output_filename": "solution.py",
+             "test_cases": [{"input": "1,2", "expected": "3"}], "test_type": "unit"},
             {"id": 2, "task_description": "implement sub", "dependencies": [1],
-             "expected_output": "sub fn", "test_cases": [{"input": "3,1", "expected": "2"}]},
+             "expected_output": "sub fn", "output_filename": "solution.py",
+             "test_cases": [{"input": "3,1", "expected": "2"}], "test_type": "unit"},
         ],
         "current_task_index": 0, "completed_steps_summary": "",
         "current_code": "def add(a,b): return a+b",
@@ -76,15 +78,27 @@ def test_advance_task_stores_completed_code():
     state["completed_code"] = {}
     state["current_code"] = "def add(a, b):\n    return a + b\n"
     result = advance_task(state)
-    assert "1" in result["completed_code"]
-    assert "def add" in result["completed_code"]["1"]
+    assert "solution.py" in result["completed_code"]
+    assert "def add" in result["completed_code"]["solution.py"]
 
 def test_advance_task_accumulates_completed_code():
     """advance_task 應保留前面 task 的 completed_code"""
     state = make_tdd_state(current_task_index=1, passed=True)
-    state["completed_code"] = {"1": "def add(a, b): return a + b"}
-    state["current_code"] = "def multiply(a, b):\n    return a * b\n"
+    state["completed_code"] = {"models.py": "class User: pass"}  # 前一個 task 的代碼
+    state["current_code"] = "def get_user(name):\n    return name\n"
+    # task index 1 = task id 2, output_filename = "solution.py"
     result = advance_task(state)
-    assert "1" in result["completed_code"]
-    assert "2" in result["completed_code"]
-    assert "def multiply" in result["completed_code"]["2"]
+    assert "models.py" in result["completed_code"]  # 前一個 task 的代碼仍在
+    assert "solution.py" in result["completed_code"]  # 當前 task 的代碼新增進去
+    assert result["completed_code"]["models.py"] == "class User: pass"  # 值未被覆蓋
+    assert "get_user" in result["completed_code"]["solution.py"]
+
+def test_advance_task_uses_output_filename_as_completed_code_key():
+    """advance_task 應用 output_filename 作為 completed_code 的 key"""
+    state = make_tdd_state(current_task_index=0, passed=True)
+    state["tasks"][0]["output_filename"] = "models.py"
+    state["current_code"] = "class User:\n    def __init__(self, name): self.name = name\n"
+    result = advance_task(state)
+    assert "models.py" in result["completed_code"]
+    assert "class User" in result["completed_code"]["models.py"]
+    assert "1" not in result["completed_code"]  # 舊的 task_id key 不應存在

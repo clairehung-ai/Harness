@@ -44,6 +44,14 @@
 
 **測試類型：** {{test_type}}
 
+**輸出檔名：** {{output_filename}}（你的代碼將寫入這個檔案）
+
+**重要：import 路徑說明**
+- 你的代碼寫入 `{{output_filename}}`，測試從對應模組名匯入（去掉 `.py`）
+  - 例如：output_filename = `services.py` → 測試會 `from services import get_user`
+- `{{completed_code}}` 中的已完成代碼可直接 import（檔案已在 sandbox 中）
+  - 例如：前一個 task 的 `models.py` → 你可以 `from models import User`
+
 **已確認的測試程式（你必須讓這些測試通過）：**
 ```
 {{current_tests}}
