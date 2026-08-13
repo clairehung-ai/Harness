@@ -1,5 +1,5 @@
 from unittest.mock import patch
-from harness.agents.generator import generator_node
+from harness.agents.generator import generator_node, test_writer_node
 from harness.state import HarnessState
 
 def make_state(test_type: str = "unit") -> HarnessState:
@@ -49,3 +49,31 @@ def test_test_type_defaults_to_unit_when_missing():
     with patch("harness.agents.generator.call_llm", side_effect=capture_llm):
         generator_node(state)
     assert "unit" in captured_prompt[0]
+
+MOCK_TESTS_ONLY = "```tests\nfrom solution import add\ndef test_add():\n    assert add(1, 2) == 3\n```"
+
+def test_test_writer_returns_tests_only():
+    """test_writer_node 只產出 current_tests，不產出 current_code"""
+    with patch("harness.agents.generator.call_test_writer_llm", return_value=MOCK_TESTS_ONLY):
+        result = test_writer_node(make_state())
+    assert "def test_add" in result["current_tests"]
+    assert result["current_code"] == ""
+    assert result["tdd_phase"] == "write_tests"
+    assert result["passed"] is False
+
+def test_test_writer_strips_fences():
+    with patch("harness.agents.generator.call_test_writer_llm", return_value=MOCK_TESTS_ONLY):
+        result = test_writer_node(make_state())
+    assert "```" not in result["current_tests"]
+
+def test_test_writer_injects_red_light_feedback():
+    """red_light_feedback 被注入 prompt"""
+    state = make_state()
+    state["evaluator_feedback"] = "SyntaxError on line 3"
+    captured = []
+    def capture(prompt):
+        captured.append(prompt)
+        return MOCK_TESTS_ONLY
+    with patch("harness.agents.generator.call_test_writer_llm", side_effect=capture):
+        test_writer_node(state)
+    assert "SyntaxError on line 3" in captured[0]

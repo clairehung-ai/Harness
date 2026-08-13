@@ -36,3 +36,31 @@ def generator_node(state: HarnessState) -> dict:
     raw = call_llm(prompt)
     return {"current_code": _extract_block(raw, "implementation"),
             "current_tests": _extract_block(raw, "tests")}
+
+def _load_test_writer_prompt() -> str:
+    return (Path(__file__).parent.parent / "prompts" / "test_writer.md").read_text(encoding="utf-8")
+
+def call_test_writer_llm(prompt: str) -> str:
+    return ChatOpenAI(model=MODEL, temperature=0).invoke(prompt).content
+
+def test_writer_node(state: HarnessState) -> dict:
+    task = state["tasks"][state["current_task_index"]]
+    prompt = (
+        _load_test_writer_prompt()
+        .replace("{{overall_goal}}", state["overall_goal"])
+        .replace("{{task_description}}", task["task_description"])
+        .replace("{{expected_output}}", task["expected_output"])
+        .replace("{{test_cases}}", json.dumps(task["test_cases"], indent=2))
+        .replace("{{test_type}}", task.get("test_type", "unit"))
+        .replace("{{red_light_feedback}}", state["evaluator_feedback"] or "None")
+    )
+    raw = call_test_writer_llm(prompt)
+    tests = _extract_block(raw, "tests")
+    return {
+        "current_tests": tests,
+        "current_code": "",
+        "tdd_phase": "write_tests",
+        "passed": False,
+    }
+
+test_writer_node.__test__ = False  # prevent pytest from collecting this as a test
