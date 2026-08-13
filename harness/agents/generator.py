@@ -90,9 +90,9 @@ def red_light_check_node(state: HarnessState) -> dict:
         }
     else:
         return {
-        "tdd_phase": "write_code",
-        "red_light_round": 0,
-        "evaluator_feedback": "",
+            "tdd_phase": "write_code",
+            "red_light_round": 0,
+            "evaluator_feedback": "",
         }
 
 def _load_code_writer_prompt() -> str:
