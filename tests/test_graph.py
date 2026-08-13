@@ -84,11 +84,14 @@ def test_advance_task_stores_completed_code():
 def test_advance_task_accumulates_completed_code():
     """advance_task 應保留前面 task 的 completed_code"""
     state = make_tdd_state(current_task_index=1, passed=True)
-    state["completed_code"] = {"solution.py": "def add(a, b): return a + b"}
-    state["current_code"] = "def multiply(a, b):\n    return a * b\n"
+    state["completed_code"] = {"models.py": "class User: pass"}  # 前一個 task 的代碼
+    state["current_code"] = "def get_user(name):\n    return name\n"
+    # task index 1 = task id 2, output_filename = "solution.py"
     result = advance_task(state)
-    assert "solution.py" in result["completed_code"]
-    assert "def multiply" in result["completed_code"]["solution.py"]
+    assert "models.py" in result["completed_code"]  # 前一個 task 的代碼仍在
+    assert "solution.py" in result["completed_code"]  # 當前 task 的代碼新增進去
+    assert result["completed_code"]["models.py"] == "class User: pass"  # 值未被覆蓋
+    assert "get_user" in result["completed_code"]["solution.py"]
 
 def test_advance_task_uses_output_filename_as_completed_code_key():
     """advance_task 應用 output_filename 作為 completed_code 的 key"""
