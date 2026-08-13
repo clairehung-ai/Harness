@@ -5,10 +5,20 @@ class BaseRunner(ABC):
     """所有測試 Skill Runner 的抽象基底類別。"""
 
     @abstractmethod
-    def run(self, code: str, tests: str) -> dict:
+    def run(self, code: str, tests: str, completed_code: dict = None, output_filename: str = "solution.py") -> dict:
         """
         執行測試並回傳結果。
-        Returns: {"success": bool, "output": str}
+
+        Args:
+            code: Generator 產出的實作代碼字串
+            tests: Generator 產出的測試程式字串
+            completed_code: 已完成 task 的代碼 {filename: code_str}，執行前全部寫入 tempdir
+            output_filename: 當前代碼寫入的檔名，預設 "solution.py"
+
+        Returns:
+            dict with keys:
+                success (bool): 測試是否全部通過
+                output (str): 測試執行的完整輸出（stdout + stderr）
         """
         ...
 

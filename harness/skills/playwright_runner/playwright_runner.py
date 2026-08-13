@@ -10,11 +10,19 @@ class PlaywrightRunner(BaseRunner):
         stripped = code.strip().lower()
         return stripped.startswith("<!doctype html") or stripped.startswith("<html")
 
-    def run(self, code: str, tests: str) -> dict:
+    def run(self, code: str, tests: str, completed_code: dict = None, output_filename: str = "solution.html") -> dict:
         with tempfile.TemporaryDirectory() as tmpdir:
-            filename = "solution.html" if self._is_html(code) else "solution.py"
-            with open(os.path.join(tmpdir, filename), "w", encoding="utf-8") as f:
+            # 1. 寫入所有已完成的檔案
+            for filename, file_code in (completed_code or {}).items():
+                with open(os.path.join(tmpdir, filename), "w", encoding="utf-8") as f:
+                    f.write(file_code)
+            # 2. 寫入當前代碼（HTML 或 Python）
+            actual_filename = output_filename if output_filename else (
+                "solution.html" if self._is_html(code) else "solution.py"
+            )
+            with open(os.path.join(tmpdir, actual_filename), "w", encoding="utf-8") as f:
                 f.write(code)
+            # 3. 寫入測試
             with open(os.path.join(tmpdir, "test_solution.py"), "w", encoding="utf-8") as f:
                 f.write(tests)
             try:

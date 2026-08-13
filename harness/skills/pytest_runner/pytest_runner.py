@@ -13,10 +13,16 @@ class PytestRunner(BaseRunner):
             raise ValueError(f"不支援的模式：{mode}，合法值為 {self.VALID_MODES}")
         self.mode = mode
 
-    def run(self, code: str, tests: str) -> dict:
+    def run(self, code: str, tests: str, completed_code: dict = None, output_filename: str = "solution.py") -> dict:
         with tempfile.TemporaryDirectory() as tmpdir:
-            with open(os.path.join(tmpdir, "solution.py"), "w", encoding="utf-8") as f:
+            # 1. 寫入所有已完成的檔案
+            for filename, file_code in (completed_code or {}).items():
+                with open(os.path.join(tmpdir, filename), "w", encoding="utf-8") as f:
+                    f.write(file_code)
+            # 2. 寫入當前代碼（用 output_filename）
+            with open(os.path.join(tmpdir, output_filename), "w", encoding="utf-8") as f:
                 f.write(code)
+            # 3. 寫入測試
             with open(os.path.join(tmpdir, "test_solution.py"), "w", encoding="utf-8") as f:
                 f.write(tests)
             try:
