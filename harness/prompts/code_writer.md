@@ -27,6 +27,17 @@
 
 **已完成步驟：** {{completed_steps_summary}}
 
+## 已產出的代碼（前面 task 的實作，可直接呼叫）
+
+{{completed_code}}
+
+閱讀以上代碼，了解：
+- 已有哪些函式、類別可以直接呼叫，不需重複實作
+- 現有的介面、參數命名和回傳型別，保持一致
+- 若值為 None，表示這是第一個 task，沒有前置代碼
+
+---
+
 **任務描述：** {{task_description}}
 
 **預期產出：** {{expected_output}}

@@ -13,6 +13,7 @@ def run_harness(user_input: str) -> list[TaskResult]:
         "round": 0, "task_results": [],
         "tdd_phase": "write_tests",
         "red_light_round": 0,
+        "completed_code": {},
     }
     final = graph.invoke(initial)
     return final["task_results"]

@@ -28,6 +28,8 @@ def advance_task(state: HarnessState) -> dict:
         "tests": state["current_tests"], "passed": state["passed"],
         "rating": 0, "feedback": state["evaluator_feedback"],
     }
+    new_completed_code = dict(state["completed_code"])
+    new_completed_code[str(task["id"])] = state["current_code"]
     return {
         "current_task_index": state["current_task_index"] + 1,
         "round": 0, "evaluator_feedback": "",
@@ -36,6 +38,7 @@ def advance_task(state: HarnessState) -> dict:
         "task_results": list(state["task_results"]) + [result],
         "tdd_phase": "write_tests",
         "red_light_round": 0,
+        "completed_code": new_completed_code,
     }
 
 

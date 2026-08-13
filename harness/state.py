@@ -34,3 +34,4 @@ class HarnessState(TypedDict):
     task_results: list[TaskResult]
     tdd_phase: str        # "write_tests" | "write_code"
     red_light_round: int  # test_writer 重試次數
+    completed_code: dict  # {str(task_id): code_str} 已完成 task 的代碼

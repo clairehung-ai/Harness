@@ -101,6 +101,16 @@ def _load_code_writer_prompt() -> str:
 def call_code_writer_llm(prompt: str) -> str:
     return ChatOpenAI(model=MODEL, temperature=0).invoke(prompt).content
 
+def _format_completed_code(completed_code: dict) -> str:
+    """將 completed_code dict 格式化為 prompt 可讀的字串。"""
+    if not completed_code:
+        return "None"
+    parts = []
+    for task_id, code in completed_code.items():
+        parts.append(f"### Task {task_id} 的代碼\n```python\n{code}\n```")
+    return "\n\n".join(parts)
+
+
 def code_writer_node(state: HarnessState) -> dict:
     task = state["tasks"][state["current_task_index"]]
     prompt = (
@@ -111,6 +121,7 @@ def code_writer_node(state: HarnessState) -> dict:
         .replace("{{expected_output}}", task["expected_output"])
         .replace("{{test_type}}", task.get("test_type", "unit"))
         .replace("{{current_tests}}", state["current_tests"])
+        .replace("{{completed_code}}", _format_completed_code(state.get("completed_code", {})))
         .replace("{{evaluator_feedback}}", state["evaluator_feedback"] or "None")
     )
     raw = call_code_writer_llm(prompt)

@@ -11,7 +11,9 @@ def make_state(test_type: str = "unit") -> HarnessState:
             "current_task_index": 0, "completed_steps_summary": "",
             "current_code": "", "current_tests": "",
             "evaluator_feedback": "", "passed": False,
-            "round": 0, "task_results": []}
+            "round": 0, "task_results": [],
+            "tdd_phase": "write_tests", "red_light_round": 0,
+            "completed_code": {}}
 
 MOCK = "```implementation\ndef add(a, b):\n    return a + b\n```\n\n```tests\nfrom solution import add\ndef test_add():\n    assert add(1, 2) == 3\n```"
 
@@ -148,3 +150,31 @@ def test_code_writer_strips_fences():
     with patch("harness.agents.generator.call_code_writer_llm", return_value=MOCK_CODE_ONLY):
         result = code_writer_node(state)
     assert "```" not in result["current_code"]
+
+def test_code_writer_injects_completed_code():
+    """completed_code 被注入 prompt"""
+    state = make_state()
+    state["current_tests"] = "from solution import add\ndef test_add(): assert add(1,2)==3\n"
+    state["completed_code"] = {"1": "def multiply(a, b):\n    return a * b\n"}
+    captured = []
+    def capture(prompt):
+        captured.append(prompt)
+        return MOCK_CODE_ONLY
+    with patch("harness.agents.generator.call_code_writer_llm", side_effect=capture):
+        code_writer_node(state)
+    assert "def multiply" in captured[0]
+    assert "{{completed_code}}" not in captured[0]
+
+def test_code_writer_empty_completed_code_shows_none():
+    """completed_code 為空時，prompt 注入 None"""
+    state = make_state()
+    state["current_tests"] = "from solution import add\ndef test_add(): assert add(1,2)==3\n"
+    state["completed_code"] = {}
+    captured = []
+    def capture(prompt):
+        captured.append(prompt)
+        return MOCK_CODE_ONLY
+    with patch("harness.agents.generator.call_code_writer_llm", side_effect=capture):
+        code_writer_node(state)
+    assert "None" in captured[0]
+    assert "{{completed_code}}" not in captured[0]
