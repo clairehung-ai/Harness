@@ -18,8 +18,18 @@ class TaskResult(TypedDict):
     code: str
     tests: str
     passed: bool
+    forced: bool   # True = 超過 MAX_ROUNDS 強制通過，品質未驗證
     rating: int
     feedback: str
+
+
+class HarnessRunResult(TypedDict):
+    task_results: list[TaskResult]
+    total: int        # 總 task 數
+    passed: int       # 通過數
+    forced: int       # 強制通過數（品質未驗證）
+    failed: int       # 明確失敗數（0，因為目前都強制通過）
+    run_log_path: str # JSONL log 路徑
 
 class HarnessState(TypedDict):
     input: str

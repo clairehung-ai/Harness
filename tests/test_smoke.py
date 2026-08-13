@@ -22,12 +22,16 @@ def test_full_pipeline_smoke():
                     with patch("harness.agents.generator.get_runner", return_value=mock_runner):
                         with patch("harness.agents.evaluator.call_llm", return_value=MOCK_EVALUATOR):
                             with patch("harness.agents.evaluator.get_runner", return_value=mock_eval_runner):
-                                results = run_harness("build an add function", log_dir=tmpdir)
+                                run_result = run_harness("build an add function", log_dir=tmpdir)
 
         # 確認 log 檔案被建立
         log_files = glob.glob(os.path.join(tmpdir, "harness_run_*.jsonl"))
         assert len(log_files) == 1
 
-    assert len(results) == 1
-    assert results[0]["task_id"] == 1
-    assert results[0]["passed"] is True
+    assert len(run_result["task_results"]) == 1
+    assert run_result["task_results"][0]["task_id"] == 1
+    assert run_result["task_results"][0]["passed"] is True
+    assert run_result["task_results"][0]["forced"] is False
+    assert run_result["total"] == 1
+    assert run_result["passed"] == 1
+    assert run_result["forced"] == 0
