@@ -78,3 +78,18 @@ def test_harness_state_has_completed_code():
     }
     assert state["completed_code"] == {}
     assert isinstance(state["completed_code"], dict)
+
+def test_harness_state_has_run_log_path():
+    from harness.state import HarnessState
+    state: HarnessState = {
+        "input": "test", "overall_goal": "test",
+        "tasks": [], "current_task_index": 0,
+        "completed_steps_summary": "",
+        "current_code": "", "current_tests": "",
+        "evaluator_feedback": "", "passed": False,
+        "round": 0, "task_results": [],
+        "tdd_phase": "write_tests", "red_light_round": 0,
+        "completed_code": {},
+        "run_log_path": "harness_run_test.jsonl",
+    }
+    assert state["run_log_path"] == "harness_run_test.jsonl"

@@ -4,6 +4,7 @@ from harness.agents.planner import planner_node
 from harness.agents.generator import test_writer_node, red_light_check_node, code_writer_node
 from harness.agents.evaluator import evaluator_node
 from harness.config import MAX_ROUNDS, MAX_RED_LIGHT_ROUNDS
+from harness.utils.logger import log_task_result
 
 
 def route_after_red_light_check(state: HarnessState) -> str:
@@ -30,6 +31,10 @@ def advance_task(state: HarnessState) -> dict:
     }
     new_completed_code = dict(state["completed_code"])
     new_completed_code[task["output_filename"]] = state["current_code"]
+
+    # 寫入 log
+    log_task_result(state.get("run_log_path", ""), state, task)
+
     return {
         "current_task_index": state["current_task_index"] + 1,
         "round": 0, "evaluator_feedback": "",

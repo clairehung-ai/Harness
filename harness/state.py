@@ -36,3 +36,4 @@ class HarnessState(TypedDict):
     tdd_phase: str        # "write_tests" | "write_code"
     red_light_round: int  # test_writer 重試次數
     completed_code: dict  # {filename: code_str}，key 為檔名
+    run_log_path: str     # JSONL log 檔案路徑，由 main.py 初始化
