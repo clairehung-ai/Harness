@@ -31,3 +31,22 @@ def test_harness_state_shape():
         "round": 0, "task_results": []
     }
     assert state["current_task_index"] == 0
+
+def test_harness_state_has_tdd_fields():
+    from harness.state import HarnessState
+    state: HarnessState = {
+        "input": "test", "overall_goal": "test",
+        "tasks": [], "current_task_index": 0,
+        "completed_steps_summary": "",
+        "current_code": "", "current_tests": "",
+        "evaluator_feedback": "", "passed": False,
+        "round": 0, "task_results": [],
+        "tdd_phase": "write_tests",
+        "red_light_round": 0,
+    }
+    assert state["tdd_phase"] == "write_tests"
+    assert state["red_light_round"] == 0
+
+def test_config_has_max_red_light_rounds():
+    from harness.config import MAX_RED_LIGHT_ROUNDS
+    assert MAX_RED_LIGHT_ROUNDS == 2
