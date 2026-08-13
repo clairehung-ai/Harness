@@ -56,6 +56,7 @@
 | `dependencies` | int[] | ✓ | 此任務依賴的其他任務 id 清單。第一個任務必須為空陣列 `[]` |
 | `expected_output` | str | ✓ | 這個任務完成後應產生的產出物（例如：檔案名稱、函式名稱、類別名稱） |
 | `test_cases` | object[] | ✓ | 測試案例清單，Generator 會依此撰寫對應的 pytest 測試程式 |
+| `output_filename` | str | ✓ | 輸出檔名。決定代碼寫入哪個檔案，讓跨模組 import 正常運作。預設 `"solution.py"` |
 | `test_type` | str | ✓ | 測試類型：`"unit"` / `"api"` / `"integration"` / `"e2e_ui"` / `"auto"` |
 
 ### test_cases 欄位說明
@@ -82,6 +83,20 @@
 | 多模組串接、sqlite3 / csv / open() | `"integration"` |
 | HTML 頁面、JavaScript、React 前端 | `"e2e_ui"` |
 | 不確定 | `"auto"` |
+
+---
+
+### output_filename 判斷規則
+
+| 任務特徵 | 填入值 |
+|---------|-------|
+| 單一函式、工具類、計算邏輯 | `"solution.py"` |
+| 資料模型、資料結構定義（dataclass、TypedDict） | `"models.py"` |
+| 業務邏輯、服務層、資料庫操作 | `"services.py"` |
+| API endpoints（FastAPI / Flask） | `"api.py"` |
+| HTML 頁面、前端 UI | `"solution.html"` |
+| 工具函式庫 | `"utils.py"` |
+| 不確定或獨立任務 | `"solution.py"`（預設） |
 
 ---
 
@@ -127,7 +142,8 @@
         "expected": "回傳 42.0"
       }
     ],
-    "test_type": "unit"
+    "test_type": "unit",
+    "output_filename": "solution.py"
   }
 ]
 
