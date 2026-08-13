@@ -74,7 +74,12 @@ def red_light_check_node(state: HarnessState) -> dict:
         test_type = detect_test_type(state["current_tests"])
 
     runner = get_runner(test_type)
-    run_result = runner.run(code="", tests=state["current_tests"])
+    run_result = runner.run(
+        code="",
+        tests=state["current_tests"],
+        completed_code=state.get("completed_code", {}),
+        output_filename=task.get("output_filename", "solution.py"),
+    )
     output = run_result["output"]
 
     if "SyntaxError" in output:

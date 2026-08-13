@@ -70,6 +70,21 @@ def test_evaluator_auto_detects():
     mock_detect.assert_called_once_with(state["current_code"])
     assert result["passed"] is True
 
+def test_evaluator_passes_completed_code_to_runner():
+    """evaluator 應把 completed_code 和 output_filename 傳給 runner"""
+    from unittest.mock import MagicMock
+    state = make_state()
+    state["tasks"][0]["output_filename"] = "services.py"
+    state["completed_code"] = {"models.py": "class User: pass"}
+    mock_runner = MagicMock()
+    mock_runner.run.return_value = {"success": True, "output": "1 passed"}
+    with patch("harness.agents.evaluator.get_runner", return_value=mock_runner):
+        with patch("harness.agents.evaluator.call_llm", return_value=PASS_JSON):
+            evaluator_node(state)
+    call_kwargs = mock_runner.run.call_args
+    assert call_kwargs.kwargs.get("completed_code") == {"models.py": "class User: pass"} or \
+           (len(call_kwargs.args) >= 3 and call_kwargs.args[2] == {"models.py": "class User: pass"})
+
 def test_evaluator_missing_test_type_fallbacks():
     from unittest.mock import MagicMock
     state = make_state()
