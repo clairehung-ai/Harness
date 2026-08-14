@@ -1,7 +1,7 @@
-import json
+﻿import json
 from pathlib import Path
 from langchain_openai import ChatOpenAI
-from harness.config import MODEL
+from harness.config import MODEL, LLM_BASE_URL, LLM_API_KEY, LLM_MAX_TOKENS
 from harness.state import HarnessState
 from harness.skills.base_runner import detect_test_type, get_runner
 
@@ -11,7 +11,9 @@ def _load_prompt() -> str:
 
 
 def call_llm(prompt: str) -> str:
-    return ChatOpenAI(model=MODEL, temperature=0).invoke(prompt).content
+    return ChatOpenAI(
+        model=MODEL, base_url=LLM_BASE_URL, api_key=LLM_API_KEY, temperature=0, max_tokens=LLM_MAX_TOKENS
+    ).invoke(prompt).content
 
 
 def evaluator_node(state: HarnessState) -> dict:
@@ -58,3 +60,6 @@ def evaluator_node(state: HarnessState) -> dict:
         feedback = f"Tests failed: {test_output[:500]}\n{feedback}"
 
     return {"passed": passed, "evaluator_feedback": feedback, "round": state["round"] + 1}
+
+
+

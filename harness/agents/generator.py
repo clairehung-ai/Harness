@@ -1,7 +1,7 @@
-import re, json
+﻿import re, json
 from pathlib import Path
 from langchain_openai import ChatOpenAI
-from harness.config import MODEL, MAX_RED_LIGHT_ROUNDS
+from harness.config import MODEL, LLM_BASE_URL, LLM_API_KEY, LLM_MAX_TOKENS, MAX_RED_LIGHT_ROUNDS
 from harness.state import HarnessState
 from harness.skills.base_runner import detect_test_type, get_runner
 
@@ -9,7 +9,9 @@ def _load_prompt() -> str:
     return (Path(__file__).parent.parent / "prompts" / "generator.md").read_text(encoding="utf-8")
 
 def call_llm(prompt: str) -> str:
-    return ChatOpenAI(model=MODEL, temperature=0).invoke(prompt).content
+    return ChatOpenAI(
+        model=MODEL, base_url=LLM_BASE_URL, api_key=LLM_API_KEY, temperature=0, max_tokens=LLM_MAX_TOKENS
+    ).invoke(prompt).content
 
 def _extract_block(text: str, label: str) -> str:
     m = re.search(rf"```{label}\n(.*?)```", text, re.DOTALL)
@@ -42,7 +44,9 @@ def _load_test_writer_prompt() -> str:
     return (Path(__file__).parent.parent / "prompts" / "test_writer.md").read_text(encoding="utf-8")
 
 def call_test_writer_llm(prompt: str) -> str:
-    return ChatOpenAI(model=MODEL, temperature=0).invoke(prompt).content
+    return ChatOpenAI(
+        model=MODEL, base_url=LLM_BASE_URL, api_key=LLM_API_KEY, temperature=0, max_tokens=LLM_MAX_TOKENS
+    ).invoke(prompt).content
 
 def test_writer_node(state: HarnessState) -> dict:
     task = state["tasks"][state["current_task_index"]]
@@ -105,7 +109,9 @@ def _load_code_writer_prompt() -> str:
     return (Path(__file__).parent.parent / "prompts" / "code_writer.md").read_text(encoding="utf-8")
 
 def call_code_writer_llm(prompt: str) -> str:
-    return ChatOpenAI(model=MODEL, temperature=0).invoke(prompt).content
+    return ChatOpenAI(
+        model=MODEL, base_url=LLM_BASE_URL, api_key=LLM_API_KEY, temperature=0, max_tokens=LLM_MAX_TOKENS
+    ).invoke(prompt).content
 
 def _format_completed_code(completed_code: dict) -> str:
     """將 completed_code dict 格式化為 prompt 可讀的字串。"""
@@ -137,3 +143,6 @@ def code_writer_node(state: HarnessState) -> dict:
         "current_code": code,
         "tdd_phase": "write_code",
     }
+
+
+
