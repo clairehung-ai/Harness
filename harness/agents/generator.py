@@ -20,8 +20,12 @@ def _extract_block(text: str, label: str) -> str:
     blocks = re.findall(r"```(?:\w+)?\n(.*?)```", text, re.DOTALL)
     if label == "implementation" and blocks:
         return blocks[0].strip()
-    if label == "tests" and len(blocks) >= 2:
-        return blocks[1].strip()
+    if label == "tests":
+        if len(blocks) >= 2:
+            return blocks[1].strip()
+        if len(blocks) == 1:
+            # test_writer 只輸出一個 block，直接取（不論標籤是 tests 或 python）
+            return blocks[0].strip()
     return ""
 
 def generator_node(state: HarnessState) -> dict:
