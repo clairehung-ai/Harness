@@ -30,6 +30,9 @@ class HarnessRunResult(TypedDict):
     forced: int       # 強制通過數（品質未驗證）
     failed: int       # 明確失敗數（0，因為目前都強制通過）
     run_log_path: str # JSONL log 路徑
+    project_path: str | None  # 導出的專案路徑（如果有啟用導出）
+    git_branch: str | None          # 新增
+    git_worktree_path: str | None   # 新增
 
 class HarnessState(TypedDict):
     input: str

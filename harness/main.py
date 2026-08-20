@@ -1,10 +1,14 @@
 import sys
+import os
 from harness.graph import build_graph
 from harness.state import HarnessState, TaskResult, HarnessRunResult
 from harness.utils.logger import init_run_log
+from harness.utils.exporter import create_project_structure
+from harness.config import AUTO_EXPORT, EXPORT_DIR, EXPORT_TESTS, GIT_ENABLED
+from harness.utils.git_manager import setup_git_worktree
 
 
-def run_harness(user_input: str, log_dir: str = ".") -> HarnessRunResult:
+def run_harness(user_input: str, log_dir: str = ".", auto_export: bool = None, export_dir: str = None) -> HarnessRunResult:
     graph = build_graph()
     run_log_path = init_run_log(log_dir)
     initial: HarnessState = {
@@ -25,6 +29,52 @@ def run_harness(user_input: str, log_dir: str = ".") -> HarnessRunResult:
     passed = sum(1 for r in task_results if r["passed"] and not r["forced"])
     forced = sum(1 for r in task_results if r["forced"])
 
+    # 自動導出代碼到專案目錄
+    project_path = None
+    if auto_export is None:
+        auto_export = AUTO_EXPORT
+    if export_dir is None:
+        export_dir = EXPORT_DIR
+
+    if auto_export:
+        # 優先用 final state，若為空則從 JSONL log fallback 讀取
+        completed_code = final.get("completed_code") or {}
+        if not completed_code and run_log_path and os.path.exists(run_log_path):
+            import json as _json
+            with open(run_log_path, encoding="utf-8") as _f:
+                for _line in _f:
+                    try:
+                        _entry = _json.loads(_line)
+                        _fn = _entry.get("output_filename")
+                        _code = _entry.get("current_code")
+                        if _fn and _code:
+                            completed_code[_fn] = _code
+                    except Exception:
+                        pass
+            if completed_code:
+                print(f"⚠️  completed_code was empty, recovered {len(completed_code)} files from JSONL log")
+
+        if completed_code:
+            project_name = export_dir if export_dir != "./output" else "generated_project"
+            try:
+                project_path = create_project_structure(
+                    completed_code=completed_code,
+                    task_results=task_results,
+                    project_name=project_name,
+                    include_tests=EXPORT_TESTS
+                )
+            except Exception as e:
+                print(f"⚠️  Export failed: {e}")
+
+    # Git worktree
+    git_branch = None
+    git_worktree_path = None
+    if auto_export and project_path and GIT_ENABLED:
+        git_result = setup_git_worktree(project_path, user_input)
+        if git_result["success"]:
+            git_branch = git_result["branch"]
+            git_worktree_path = git_result["worktree_path"]
+
     result: HarnessRunResult = {
         "task_results": task_results,
         "total": len(task_results),
@@ -32,6 +82,9 @@ def run_harness(user_input: str, log_dir: str = ".") -> HarnessRunResult:
         "forced": forced,
         "failed": 0,
         "run_log_path": run_log_path,
+        "project_path": project_path,
+        "git_branch": git_branch,
+        "git_worktree_path": git_worktree_path,
     }
     return result
 
@@ -53,3 +106,7 @@ if __name__ == "__main__":
     print(f"\n📊 Summary: {run_result['passed']}/{run_result['total']} passed"
           + (f", {run_result['forced']} forced" if run_result["forced"] else ""))
     print(f"📋 Run log: {run_result['run_log_path']}")
+    if run_result.get("project_path"):
+        print(f"📦 Project exported to: {run_result['project_path']}")
+    if run_result.get("git_worktree_path"):
+        print(f"🌿 Git worktree: {run_result['git_worktree_path']}  (branch: {run_result['git_branch']})")
