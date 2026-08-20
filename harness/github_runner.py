@@ -13,7 +13,11 @@ push branch，開 PR，在 Issue 留言。
 """
 import os
 import subprocess
-import sys         # noqa: F401 — used in later tasks
+import sys
+
+# Placeholder — populated lazily inside main() via deferred import to avoid circular imports.
+# Tests can patch harness.github_runner.run_harness directly.
+run_harness = None
 
 
 def get_issue_input() -> dict:
@@ -105,3 +109,92 @@ def comment_on_issue(repo: str, issue_number: int, message: str) -> bool:
     if not ok:
         print(f"⚠️  gh issue comment failed: {out}")
     return ok
+
+
+def main() -> None:
+    """完整執行流程：
+    1. 讀 Issue 環境變數
+    2. run_harness()
+    3. push branch
+    4. 開 PR
+    5. 在 Issue 留言
+    """
+    import harness.github_runner as _self
+    if _self.run_harness is None:
+        from harness.main import run_harness as _rh  # 延遲 import 避免循環
+        _self.run_harness = _rh
+    _run_harness = _self.run_harness
+
+    # 讀取 Issue 資訊
+    try:
+        issue = get_issue_input()
+    except EnvironmentError as e:
+        print(f"❌ Missing env vars: {e}")
+        sys.exit(1)
+
+    repo = issue["repo"]
+    issue_number = issue["number"]
+    export_dir = issue["export_dir"]
+    user_input = build_user_input(issue["title"], issue["body"])
+
+    print(f"🚀 Running Harness for Issue #{issue_number}: {issue['title']}")
+
+    # 執行 Harness
+    try:
+        result = _run_harness(user_input=user_input, export_dir=export_dir)
+    except Exception as e:
+        print(f"❌ Harness 執行失敗：{e}")
+        comment_on_issue(
+            repo=repo,
+            issue_number=issue_number,
+            message=f"## Harness 執行失敗\n\n```\n{e}\n```\n\nIssue #{issue_number} 的需求尚未實作，請檢查 Harness 日誌。",
+        )
+        return
+
+    branch = result.get("git_branch")
+    project_path = result.get("project_path")
+
+    # Push branch
+    if branch and project_path:
+        push_branch(project_path=project_path, branch=branch)
+    else:
+        print("⚠️  No branch/project_path in result, skipping push")
+
+    # 開 PR
+    pr_url = None
+    if branch:
+        pr_url = create_pr(
+            repo=repo,
+            branch=branch,
+            title=issue["title"],
+            issue_number=issue_number,
+        )
+
+    # Issue 留言
+    passed = result.get("passed", 0)
+    total = result.get("total", 0)
+    forced = result.get("forced", 0)
+
+    if pr_url:
+        comment_msg = (
+            f"## ✅ Harness 完成\n\n"
+            f"PR：{pr_url}\n\n"
+            f"**結果：** {passed}/{total} tasks passed"
+            + (f"，{forced} forced（品質未驗證）" if forced else "")
+            + f"\n\nCloses #{issue_number}"
+        )
+    else:
+        comment_msg = (
+            f"## ⚠️  Harness 完成但 PR 建立失敗\n\n"
+            f"Branch：`{branch}`\n\n"
+            f"**結果：** {passed}/{total} tasks passed"
+            + (f"，{forced} forced" if forced else "")
+            + "\n\n請手動建立 PR。"
+        )
+
+    comment_on_issue(repo=repo, issue_number=issue_number, message=comment_msg)
+    print(f"✅ Done. PR: {pr_url or '(failed to create)'}")
+
+
+if __name__ == "__main__":
+    main()

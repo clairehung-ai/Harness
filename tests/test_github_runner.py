@@ -6,6 +6,7 @@ import subprocess
 from harness.github_runner import (
     get_issue_input, build_user_input,
     push_branch, create_pr, comment_on_issue,
+    main,
 )
 
 
@@ -98,3 +99,51 @@ def test_comment_on_issue_calls_gh():
     call_args = mock_run.call_args[0][0]
     assert "issue" in call_args
     assert "comment" in call_args
+
+
+def test_main_success_flow(tmp_path):
+    """main() 成功時：run_harness → push → PR → Issue 留言含 PR URL"""
+    env = {
+        "ISSUE_TITLE": "新增匯出功能",
+        "ISSUE_BODY": "匯出 CSV",
+        "ISSUE_NUMBER": "42",
+        "REPO": "clairehung-ai/Asset_inventory",
+        "EXPORT_DIR": str(tmp_path),
+    }
+    mock_result = {
+        "task_results": [],
+        "total": 1, "passed": 1, "forced": 0, "failed": 0,
+        "run_log_path": str(tmp_path / "run.jsonl"),
+        "project_path": str(tmp_path),
+        "git_branch": "run/asset-inventory",
+        "git_worktree_path": str(tmp_path / "worktrees" / "asset-inventory"),
+    }
+    with patch.dict(os.environ, env, clear=False), \
+         patch("harness.github_runner.run_harness", return_value=mock_result) as mock_rh, \
+         patch("harness.github_runner.push_branch", return_value=True), \
+         patch("harness.github_runner.create_pr", return_value="https://github.com/clairehung-ai/Asset_inventory/pull/1"), \
+         patch("harness.github_runner.comment_on_issue", return_value=True) as mock_comment:
+        main()
+    mock_rh.assert_called_once()
+    # Issue 留言應包含 PR URL
+    call_args = mock_comment.call_args
+    comment_msg = call_args[1].get("message") or call_args[0][2]
+    assert "https://github.com/clairehung-ai/Asset_inventory/pull/1" in comment_msg
+
+
+def test_main_harness_failure_comments_on_issue(tmp_path):
+    """main() 當 run_harness 拋出例外時，在 Issue 留言說明失敗"""
+    env = {
+        "ISSUE_TITLE": "新增匯出功能",
+        "ISSUE_BODY": "",
+        "ISSUE_NUMBER": "42",
+        "REPO": "clairehung-ai/Asset_inventory",
+        "EXPORT_DIR": str(tmp_path),
+    }
+    with patch.dict(os.environ, env, clear=False), \
+         patch("harness.github_runner.run_harness", side_effect=RuntimeError("LLM timeout")), \
+         patch("harness.github_runner.comment_on_issue", return_value=True) as mock_comment:
+        main()
+    call_args = mock_comment.call_args
+    comment_msg = call_args[1].get("message") or call_args[0][2]
+    assert any(word in comment_msg for word in ["失敗", "error", "LLM timeout", "failed", "Error"])
