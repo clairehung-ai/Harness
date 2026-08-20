@@ -18,7 +18,7 @@ GIT_ENABLED: bool = os.environ.get("HARNESS_GIT_ENABLED", "true").lower() == "tr
 
 # LLM Server 設定（可透過環境變數切換後端，例如 Groq 或 Anthropic）
 LLM_BASE_URL: str = os.environ.get("HARNESS_BASE_URL", "https://api.groq.com/openai/v1")
-LLM_API_KEY: str = os.environ.get("HARNESS_API_KEY", "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")
+LLM_API_KEY: str = os.environ.get("HARNESS_API_KEY", "none")
 LLM_MAX_TOKENS: int = int(os.environ.get("HARNESS_MAX_TOKENS", "4096"))
 
 # 可透過環境變數注入額外 header（例如 Anthropic 需要 anthropic-version）
