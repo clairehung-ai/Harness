@@ -3,8 +3,6 @@ import os
 import re
 import subprocess
 import time
-from typing import Optional
-
 
 def slugify(text: str) -> str:
     """從需求文字產生 git branch slug。
@@ -47,6 +45,8 @@ def git_init_if_needed(project_path: str) -> bool:
     """若 project_path 不是 git repo，則 git init + 初始 commit。
     回傳 True 表示 repo 已就緒（新建或原本就有）。
     """
+    if os.environ.get("HARNESS_GIT_ENABLED", "true").lower() == "false":
+        return False
     if _is_git_repo(project_path):
         return True
 
@@ -56,7 +56,7 @@ def git_init_if_needed(project_path: str) -> bool:
         return False
 
     # 設定 initial branch 名稱為 main
-    _run_git(["checkout", "-b", "main"], cwd=project_path)
+    _run_git(["symbolic-ref", "HEAD", "refs/heads/main"], cwd=project_path)
 
     # 設定最低限度的 git config（避免 CI 環境報錯）
     _run_git(["config", "user.email", "harness@local"], cwd=project_path)
