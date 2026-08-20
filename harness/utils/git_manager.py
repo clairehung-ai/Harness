@@ -46,8 +46,6 @@ def git_init_if_needed(project_path: str) -> bool:
     """若 project_path 不是 git repo，則 git init + 初始 commit。
     回傳 True 表示 repo 已就緒（新建或原本就有）。
     """
-    if os.environ.get("HARNESS_GIT_ENABLED", "true").lower() == "false":
-        return False
     if _is_git_repo(project_path):
         return True
 
@@ -87,6 +85,8 @@ def _unique_branch(project_path: str, base_branch: str) -> str:
             ok2, out2 = _run_git(["branch", "--list", candidate], cwd=project_path)
             if ok2 and not out2.strip():
                 return candidate
+        # Exhausted all candidates — fall back to timestamp suffix
+        return f"{base_branch}-{int(time.time())}"
     return base_branch
 
 
@@ -97,8 +97,6 @@ def setup_git_worktree(project_path: str, user_input: str) -> dict:
     3. git worktree add <worktrees_dir>/<slug> -b run/<slug>
     回傳 {"branch": str, "worktree_path": str, "success": bool}
     """
-    if os.environ.get("HARNESS_GIT_ENABLED", "true").lower() == "false":
-        return {"branch": None, "worktree_path": None, "success": False}
     failure = {"branch": None, "worktree_path": None, "success": False}
 
     if not git_init_if_needed(project_path):
@@ -146,11 +144,15 @@ def setup_git_worktree(project_path: str, user_input: str) -> dict:
             shutil.copy2(src, dst)
 
     # 在 worktree 裡 commit
-    _run_git(["add", "."], cwd=worktree_path)
-    _run_git(
+    ok_add, out_add = _run_git(["add", "."], cwd=worktree_path)
+    if not ok_add:
+        print(f"⚠️  git add in worktree failed: {out_add}")
+    ok_commit, out_commit = _run_git(
         ["commit", "-m", f"feat: harness run — {slug}"],
         cwd=worktree_path,
     )
+    if not ok_commit:
+        print(f"⚠️  git commit in worktree failed: {out_commit}")
 
     print(f"✅ git worktree created: {worktree_path}  (branch: {branch})")
     return {"branch": branch, "worktree_path": worktree_path, "success": True}

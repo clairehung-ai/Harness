@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 from harness.graph import build_graph
 from harness.state import HarnessState, TaskResult, HarnessRunResult
 from harness.utils.logger import init_run_log
@@ -8,7 +9,7 @@ from harness.config import AUTO_EXPORT, EXPORT_DIR, EXPORT_TESTS, GIT_ENABLED
 from harness.utils.git_manager import setup_git_worktree
 
 
-def run_harness(user_input: str, log_dir: str = ".", auto_export: bool = None, export_dir: str = None) -> HarnessRunResult:
+def run_harness(user_input: str, log_dir: str = ".", auto_export: bool | None = None, export_dir: str | None = None) -> HarnessRunResult:
     graph = build_graph()
     run_log_path = init_run_log(log_dir)
     initial: HarnessState = {
@@ -40,11 +41,10 @@ def run_harness(user_input: str, log_dir: str = ".", auto_export: bool = None, e
         # 優先用 final state，若為空則從 JSONL log fallback 讀取
         completed_code = final.get("completed_code") or {}
         if not completed_code and run_log_path and os.path.exists(run_log_path):
-            import json as _json
             with open(run_log_path, encoding="utf-8") as _f:
                 for _line in _f:
                     try:
-                        _entry = _json.loads(_line)
+                        _entry = json.loads(_line)
                         _fn = _entry.get("output_filename")
                         _code = _entry.get("current_code")
                         if _fn and _code:

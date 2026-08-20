@@ -34,6 +34,7 @@ class HarnessRunResult(TypedDict):
     git_branch: str | None          # 新增
     git_worktree_path: str | None   # 新增
 
+
 class HarnessState(TypedDict):
     input: str
     overall_goal: str
