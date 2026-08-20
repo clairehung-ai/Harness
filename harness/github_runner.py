@@ -12,8 +12,8 @@ push branch，開 PR，在 Issue 留言。
   EXPORT_DIR      — 生成專案的輸出路徑
 """
 import os
-import subprocess
-import sys
+import subprocess  # noqa: F401 — used in later tasks
+import sys         # noqa: F401 — used in later tasks
 
 
 def get_issue_input() -> dict:
@@ -26,16 +26,19 @@ def get_issue_input() -> dict:
         EnvironmentError: 若缺少必要環境變數
     """
     missing = []
-    for key in ["ISSUE_TITLE", "ISSUE_NUMBER", "REPO", "EXPORT_DIR"]:
+    for key in ["ISSUE_TITLE", "REPO", "EXPORT_DIR"]:
         if not os.environ.get(key):
             missing.append(key)
+    number_raw = os.environ.get("ISSUE_NUMBER", "").strip()
+    if not number_raw:
+        missing.append("ISSUE_NUMBER")
     if missing:
         raise EnvironmentError(f"Missing required environment variables: {', '.join(missing)}")
 
     return {
         "title": os.environ["ISSUE_TITLE"],
         "body": os.environ.get("ISSUE_BODY", ""),
-        "number": int(os.environ["ISSUE_NUMBER"]),
+        "number": int(number_raw),
         "repo": os.environ["REPO"],
         "export_dir": os.environ["EXPORT_DIR"],
     }
