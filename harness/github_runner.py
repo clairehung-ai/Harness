@@ -39,10 +39,15 @@ def get_issue_input() -> dict:
     if missing:
         raise EnvironmentError(f"Missing required environment variables: {', '.join(missing)}")
 
+    try:
+        number = int(number_raw)
+    except ValueError:
+        raise EnvironmentError(f"ISSUE_NUMBER must be an integer, got: {number_raw!r}")
+
     return {
         "title": os.environ["ISSUE_TITLE"],
         "body": os.environ.get("ISSUE_BODY", ""),
-        "number": int(number_raw),
+        "number": number,
         "repo": os.environ["REPO"],
         "export_dir": os.environ["EXPORT_DIR"],
     }

@@ -45,7 +45,7 @@ def test_build_user_input_empty_body():
 
 
 def test_push_branch_calls_git_push():
-    with patch("subprocess.run") as mock_run:
+    with patch("harness.github_runner.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         result = push_branch("D:/projects/Asset_inventory", "run/asset-inventory")
     assert result is True
@@ -56,7 +56,7 @@ def test_push_branch_calls_git_push():
 
 
 def test_push_branch_returns_false_on_failure():
-    with patch("subprocess.run") as mock_run:
+    with patch("harness.github_runner.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="error")
         result = push_branch("D:/projects/Asset_inventory", "run/asset-inventory")
     assert result is False
@@ -64,7 +64,7 @@ def test_push_branch_returns_false_on_failure():
 
 def test_create_pr_returns_url_on_success():
     pr_url = "https://github.com/clairehung-ai/Asset_inventory/pull/1"
-    with patch("subprocess.run") as mock_run:
+    with patch("harness.github_runner.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout=pr_url, stderr="")
         result = create_pr(
             repo="clairehung-ai/Asset_inventory",
@@ -76,7 +76,7 @@ def test_create_pr_returns_url_on_success():
 
 
 def test_create_pr_returns_none_on_failure():
-    with patch("subprocess.run") as mock_run:
+    with patch("harness.github_runner.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="error")
         result = create_pr(
             repo="clairehung-ai/Asset_inventory",
@@ -88,7 +88,7 @@ def test_create_pr_returns_none_on_failure():
 
 
 def test_comment_on_issue_calls_gh():
-    with patch("subprocess.run") as mock_run:
+    with patch("harness.github_runner.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         result = comment_on_issue(
             repo="clairehung-ai/Asset_inventory",
@@ -99,6 +99,16 @@ def test_comment_on_issue_calls_gh():
     call_args = mock_run.call_args[0][0]
     assert "issue" in call_args
     assert "comment" in call_args
+
+
+def test_get_issue_input_invalid_issue_number_raises():
+    with patch.dict(os.environ, {
+        "ISSUE_TITLE": "x", "REPO": "o/r",
+        "EXPORT_DIR": "/tmp", "ISSUE_NUMBER": "not-a-number",
+        "ISSUE_BODY": "",
+    }, clear=False):
+        with pytest.raises(EnvironmentError):
+            get_issue_input()
 
 
 def test_main_success_flow(tmp_path):
