@@ -132,7 +132,7 @@ def test_main_success_flow(tmp_path):
 
 
 def test_main_harness_failure_comments_on_issue(tmp_path):
-    """main() 當 run_harness 拋出例外時，在 Issue 留言說明失敗"""
+    """main() 當 run_harness 拋出例外時，在 Issue 留言說明失敗，並以 sys.exit(1) 結束"""
     env = {
         "ISSUE_TITLE": "新增匯出功能",
         "ISSUE_BODY": "",
@@ -143,7 +143,9 @@ def test_main_harness_failure_comments_on_issue(tmp_path):
     with patch.dict(os.environ, env, clear=False), \
          patch("harness.github_runner.run_harness", side_effect=RuntimeError("LLM timeout")), \
          patch("harness.github_runner.comment_on_issue", return_value=True) as mock_comment:
-        main()
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
     call_args = mock_comment.call_args
     comment_msg = call_args[1].get("message") or call_args[0][2]
     assert any(word in comment_msg for word in ["失敗", "error", "LLM timeout", "failed", "Error"])

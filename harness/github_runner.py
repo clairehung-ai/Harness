@@ -119,11 +119,10 @@ def main() -> None:
     4. 開 PR
     5. 在 Issue 留言
     """
-    import harness.github_runner as _self
-    if _self.run_harness is None:
+    global run_harness
+    if run_harness is None:
         from harness.main import run_harness as _rh  # 延遲 import 避免循環
-        _self.run_harness = _rh
-    _run_harness = _self.run_harness
+        run_harness = _rh
 
     # 讀取 Issue 資訊
     try:
@@ -141,7 +140,7 @@ def main() -> None:
 
     # 執行 Harness
     try:
-        result = _run_harness(user_input=user_input, export_dir=export_dir)
+        result = run_harness(user_input=user_input, export_dir=export_dir)
     except Exception as e:
         print(f"❌ Harness 執行失敗：{e}")
         comment_on_issue(
@@ -149,7 +148,7 @@ def main() -> None:
             issue_number=issue_number,
             message=f"## Harness 執行失敗\n\n```\n{e}\n```\n\nIssue #{issue_number} 的需求尚未實作，請檢查 Harness 日誌。",
         )
-        return
+        sys.exit(1)
 
     branch = result.get("git_branch")
     project_path = result.get("project_path")
