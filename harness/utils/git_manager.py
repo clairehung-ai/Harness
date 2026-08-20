@@ -1,6 +1,7 @@
 # harness/utils/git_manager.py
 import os
 import re
+import shutil
 import subprocess
 import time
 
@@ -74,3 +75,72 @@ def git_init_if_needed(project_path: str) -> bool:
 
     print(f"✅ git init + initial commit: {project_path}")
     return True
+
+
+def _unique_branch(project_path: str, base_branch: str) -> str:
+    """若 base_branch 已存在，加 -2, -3 ... 後綴直到找到可用名稱。"""
+    ok, out = _run_git(["branch", "--list", base_branch], cwd=project_path)
+    if ok and out.strip():
+        # 已存在，找下一個可用編號
+        for i in range(2, 100):
+            candidate = f"{base_branch}-{i}"
+            ok2, out2 = _run_git(["branch", "--list", candidate], cwd=project_path)
+            if ok2 and not out2.strip():
+                return candidate
+    return base_branch
+
+
+def setup_git_worktree(project_path: str, user_input: str) -> dict:
+    """
+    1. git init（若需要）
+    2. 從 user_input 產生 slug
+    3. git worktree add <worktrees_dir>/<slug> -b run/<slug>
+    回傳 {"branch": str, "worktree_path": str, "success": bool}
+    """
+    failure = {"branch": None, "worktree_path": None, "success": False}
+
+    if not git_init_if_needed(project_path):
+        return failure
+
+    slug = slugify(user_input)
+    base_branch = f"run/{slug}"
+    branch = _unique_branch(project_path, base_branch)
+
+    # worktree 目錄：與 project 同層，名稱為 <project_dirname>-worktrees/<slug>
+    project_parent = os.path.dirname(os.path.abspath(project_path))
+    project_dirname = os.path.basename(os.path.abspath(project_path))
+    worktrees_root = os.path.join(project_parent, f"{project_dirname}-worktrees")
+    worktree_path = os.path.join(worktrees_root, slug if branch == base_branch else branch.replace("/", "-"))
+
+    os.makedirs(worktrees_root, exist_ok=True)
+
+    ok, out = _run_git(
+        ["worktree", "add", worktree_path, "-b", branch],
+        cwd=project_path,
+    )
+    if not ok:
+        print(f"⚠️  git worktree add failed: {out}")
+        return failure
+
+    # 把 project_path 的檔案複製進 worktree（覆蓋）
+    for item in os.listdir(project_path):
+        if item == ".git":
+            continue
+        src = os.path.join(project_path, item)
+        dst = os.path.join(worktree_path, item)
+        if os.path.isdir(src):
+            if os.path.exists(dst):
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst)
+        else:
+            shutil.copy2(src, dst)
+
+    # 在 worktree 裡 commit
+    _run_git(["add", "."], cwd=worktree_path)
+    _run_git(
+        ["commit", "-m", f"feat: harness run — {slug}"],
+        cwd=worktree_path,
+    )
+
+    print(f"✅ git worktree created: {worktree_path}  (branch: {branch})")
+    return {"branch": branch, "worktree_path": worktree_path, "success": True}
