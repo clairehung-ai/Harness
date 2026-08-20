@@ -140,6 +140,11 @@ def main() -> None:
     issue_number = issue["number"]
     export_dir = issue["export_dir"]
     user_input = build_user_input(issue["title"], issue["body"])
+    # 確保 user_input 含英數字以產生有意義的 git branch slug
+    # 中文標題會被 slugify 過濾掉，加上 issue 編號作為保底
+    slug_prefix = f"issue-{issue_number}"
+    if slug_prefix not in user_input:
+        user_input = f"{slug_prefix} {user_input}"
 
     print(f"🚀 Running Harness for Issue #{issue_number}: {issue['title']}")
 
