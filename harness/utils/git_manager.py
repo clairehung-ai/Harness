@@ -97,6 +97,8 @@ def setup_git_worktree(project_path: str, user_input: str) -> dict:
     3. git worktree add <worktrees_dir>/<slug> -b run/<slug>
     回傳 {"branch": str, "worktree_path": str, "success": bool}
     """
+    if os.environ.get("HARNESS_GIT_ENABLED", "true").lower() == "false":
+        return {"branch": None, "worktree_path": None, "success": False}
     failure = {"branch": None, "worktree_path": None, "success": False}
 
     if not git_init_if_needed(project_path):
@@ -110,7 +112,15 @@ def setup_git_worktree(project_path: str, user_input: str) -> dict:
     project_parent = os.path.dirname(os.path.abspath(project_path))
     project_dirname = os.path.basename(os.path.abspath(project_path))
     worktrees_root = os.path.join(project_parent, f"{project_dirname}-worktrees")
-    worktree_path = os.path.join(worktrees_root, slug if branch == base_branch else branch.replace("/", "-"))
+    # Extract just the suffix number from branch for dedup paths
+    if branch == base_branch:
+        wt_dirname = slug
+    else:
+        # branch is like "run/asset-inventory-2", slug is "asset-inventory"
+        # We want dir name to be "asset-inventory-2"
+        suffix = branch[len(base_branch):]  # e.g. "-2"
+        wt_dirname = slug + suffix
+    worktree_path = os.path.join(worktrees_root, wt_dirname)
 
     os.makedirs(worktrees_root, exist_ok=True)
 

@@ -1,9 +1,8 @@
 # tests/test_git_manager.py
 import os
 import pytest
-import tempfile
 import shutil
-from harness.utils.git_manager import slugify, setup_git_worktree, git_init_if_needed
+from harness.utils.git_manager import slugify, setup_git_worktree, git_init_if_needed, _run_git
 
 def test_slugify_english():
     assert slugify("asset inventory web system") == "asset-inventory-web-system"
@@ -27,12 +26,15 @@ def test_slugify_strips_special_chars():
 
 
 def test_setup_git_worktree_creates_branch(tmp_path):
-    # 建一個有檔案的臨時目錄模擬 project
     (tmp_path / "main.py").write_text("# hello")
     result = setup_git_worktree(str(tmp_path), "asset inventory system")
     assert result["success"] is True
     assert result["branch"] == "run/asset-inventory-system"
     assert os.path.isdir(result["worktree_path"])
+    # cleanup
+    _run_git(["worktree", "remove", "--force", result["worktree_path"]], cwd=str(tmp_path))
+    if os.path.isdir(result["worktree_path"]):
+        shutil.rmtree(result["worktree_path"], ignore_errors=True)
 
 def test_setup_git_worktree_deduplicates_branch(tmp_path):
     (tmp_path / "main.py").write_text("# hello")
@@ -40,5 +42,9 @@ def test_setup_git_worktree_deduplicates_branch(tmp_path):
     r2 = setup_git_worktree(str(tmp_path), "asset inventory")
     assert r1["success"] and r2["success"]
     assert r1["branch"] != r2["branch"]
-    # 第二次應該是 run/asset-inventory-2
     assert r2["branch"] == "run/asset-inventory-2"
+    # cleanup
+    for r in [r1, r2]:
+        _run_git(["worktree", "remove", "--force", r["worktree_path"]], cwd=str(tmp_path))
+        if os.path.isdir(r["worktree_path"]):
+            shutil.rmtree(r["worktree_path"], ignore_errors=True)
