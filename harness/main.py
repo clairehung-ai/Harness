@@ -27,6 +27,7 @@ def run_harness(user_input: str, log_dir: str = ".", auto_export: bool | None = 
         "completed_code": {},
         "run_log_path": run_log_path,
         "export_dir": export_dir,
+        "last_test_output": "",
     }
     final = graph.invoke(initial)
     task_results: list[TaskResult] = final["task_results"]

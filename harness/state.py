@@ -21,6 +21,7 @@ class TaskResult(TypedDict):
     forced: bool   # True = 超過 MAX_ROUNDS 強制通過，品質未驗證
     rating: int
     feedback: str
+    test_output: str  # pytest 實際輸出
 
 
 class HarnessRunResult(TypedDict):
@@ -52,3 +53,4 @@ class HarnessState(TypedDict):
     completed_code: dict  # {filename: code_str}，key 為檔名
     run_log_path: str     # JSONL log 檔案路徑，由 main.py 初始化
     export_dir: str       # 目標專案目錄，供 planner 掃描現有結構
+    last_test_output: str  # 最後一次 pytest 輸出，供 github_runner 讀取

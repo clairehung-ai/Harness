@@ -183,6 +183,30 @@ def main() -> None:
     passed = result.get("passed", 0)
     total = result.get("total", 0)
     forced = result.get("forced", 0)
+    task_results = result.get("task_results", [])
+
+    # 產生每個 task 的測試摘要
+    task_lines = []
+    for r in task_results:
+        if r.get("forced"):
+            icon = "⚠️"
+            status = "FORCED"
+        elif r.get("passed"):
+            icon = "✅"
+            status = "PASS"
+        else:
+            icon = "❌"
+            status = "FAIL"
+        task_lines.append(f"| {r.get('task_id')} | {icon} {status} | {r.get('feedback', '')[:80]} |")
+
+    task_table = ""
+    if task_lines:
+        task_table = (
+            "\n\n### 測試結果明細\n\n"
+            "| Task | 狀態 | 說明 |\n"
+            "|------|------|------|\n"
+            + "\n".join(task_lines)
+        )
 
     if pr_url:
         comment_msg = (
@@ -190,6 +214,7 @@ def main() -> None:
             f"PR：{pr_url}\n\n"
             f"**結果：** {passed}/{total} tasks passed"
             + (f"，{forced} forced（品質未驗證）" if forced else "")
+            + task_table
             + f"\n\nCloses #{issue_number}"
         )
     else:
@@ -198,6 +223,7 @@ def main() -> None:
             f"Branch：`{branch}`\n\n"
             f"**結果：** {passed}/{total} tasks passed"
             + (f"，{forced} forced" if forced else "")
+            + task_table
             + "\n\n請手動建立 PR。"
         )
 

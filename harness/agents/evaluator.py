@@ -57,7 +57,12 @@ def evaluator_node(state: HarnessState) -> dict:
     if not test_passed:
         feedback = f"Tests failed: {test_output[:500]}\n{feedback}"
 
-    return {"passed": passed, "evaluator_feedback": feedback, "round": state["round"] + 1}
+    return {
+        "passed": passed,
+        "evaluator_feedback": feedback,
+        "round": state["round"] + 1,
+        "last_test_output": test_output,
+    }
 
 
 

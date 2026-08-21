@@ -29,6 +29,7 @@ def advance_task(state: HarnessState) -> dict:
         "tests": state["current_tests"], "passed": state["passed"],
         "forced": not state["passed"],
         "rating": 0, "feedback": state["evaluator_feedback"],
+        "test_output": state.get("last_test_output", ""),
     }
     new_completed_code = dict(state["completed_code"])
     new_completed_code[task["output_filename"]] = state["current_code"]
