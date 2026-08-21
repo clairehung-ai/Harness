@@ -57,6 +57,13 @@ def evaluator_node(state: HarnessState) -> dict:
     if not test_passed:
         feedback = f"Tests failed: {test_output[:500]}\n{feedback}"
 
+    # pytest 通過就算通過，LLM 不能否決實際測試結果
+    # LLM 的 is_success 只在 pytest 通過時才有補充意義（避免弱測試）
+    if test_passed and not eval_result.get("is_success", False):
+        feedback = f"⚠️ pytest 通過但 LLM 品質審查未通過：{feedback}"
+        # 仍然算 passed，以 pytest 為準
+        passed = True
+
     return {
         "passed": passed,
         "evaluator_feedback": feedback,

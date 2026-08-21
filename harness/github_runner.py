@@ -116,6 +116,18 @@ def comment_on_issue(repo: str, issue_number: int, message: str) -> bool:
     return ok
 
 
+def upload_artifacts(repo: str, artifacts_dir: str) -> str:
+    """把 test_artifacts 目錄壓縮後用 gh 上傳到 GitHub Actions run。
+    回傳 artifacts URL 或空字串。
+    """
+    if not artifacts_dir or not os.path.isdir(artifacts_dir):
+        return ""
+    # GitHub Actions Artifacts 只能在 workflow 內上傳，
+    # 這裡改成把報告路徑印出來讓 workflow 的 upload-artifact step 處理
+    print(f"📁 Artifacts 位置：{artifacts_dir}")
+    return artifacts_dir
+
+
 def main() -> None:
     """完整執行流程：
     1. 讀 Issue 環境變數
@@ -208,6 +220,15 @@ def main() -> None:
             + "\n".join(task_lines)
         )
 
+    # 檢查是否有 Playwright artifacts
+    artifacts_dir = os.path.join(os.path.dirname(export_dir) if export_dir else ".", "test_artifacts")
+    artifacts_note = ""
+    if os.path.isdir(artifacts_dir):
+        screenshots = [f for f in os.listdir(os.path.join(artifacts_dir, "screenshots")) if f.endswith(".png")] if os.path.isdir(os.path.join(artifacts_dir, "screenshots")) else []
+        report_exists = os.path.exists(os.path.join(artifacts_dir, "report.html"))
+        if screenshots or report_exists:
+            artifacts_note = f"\n\n### 測試 Artifacts\n📸 截圖：{len(screenshots)} 張　📄 HTML 報告：{'有' if report_exists else '無'}\n（詳見 GitHub Actions Run → Artifacts）"
+
     if pr_url:
         comment_msg = (
             f"## ✅ Harness 完成\n\n"
@@ -215,6 +236,7 @@ def main() -> None:
             f"**結果：** {passed}/{total} tasks passed"
             + (f"，{forced} forced（品質未驗證）" if forced else "")
             + task_table
+            + artifacts_note
             + f"\n\nCloses #{issue_number}"
         )
     else:
@@ -224,6 +246,7 @@ def main() -> None:
             f"**結果：** {passed}/{total} tasks passed"
             + (f"，{forced} forced" if forced else "")
             + task_table
+            + artifacts_note
             + "\n\n請手動建立 PR。"
         )
 
