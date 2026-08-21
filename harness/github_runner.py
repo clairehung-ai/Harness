@@ -74,7 +74,9 @@ def _run_cmd(args: list[str], cwd: str | None = None) -> tuple[bool, str]:
             text=True,
             timeout=120,
         )
-        return result.returncode == 0, (result.stdout or "").strip()
+        # stdout + stderr 都回傳，確保失敗時可見完整錯誤訊息
+        output = ((result.stdout or "") + (result.stderr or "")).strip()
+        return result.returncode == 0, output
     except Exception as e:
         return False, str(e)
 
