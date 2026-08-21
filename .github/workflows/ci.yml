@@ -1,0 +1,32 @@
+name: Harness CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: [self-hosted, windows]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        shell: cmd
+        env:
+          HARNESS_GIT_ENABLED: "false"
+        run: |
+          python -m pytest tests/ -v --tb=short --ignore=tests/test_pytest_runner.py -p no:warnings
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-test-results
+          path: test_artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
