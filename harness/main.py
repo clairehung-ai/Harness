@@ -12,6 +12,9 @@ from harness.utils.git_manager import setup_git_worktree
 def run_harness(user_input: str, log_dir: str = ".", auto_export: bool | None = None, export_dir: str | None = None) -> HarnessRunResult:
     graph = build_graph()
     run_log_path = init_run_log(log_dir)
+    if export_dir is None:
+        export_dir = EXPORT_DIR
+
     initial: HarnessState = {
         "input": user_input, "overall_goal": "",
         "tasks": [], "current_task_index": 0,
@@ -23,6 +26,7 @@ def run_harness(user_input: str, log_dir: str = ".", auto_export: bool | None = 
         "red_light_round": 0,
         "completed_code": {},
         "run_log_path": run_log_path,
+        "export_dir": export_dir,
     }
     final = graph.invoke(initial)
     task_results: list[TaskResult] = final["task_results"]
@@ -34,8 +38,6 @@ def run_harness(user_input: str, log_dir: str = ".", auto_export: bool | None = 
     project_path = None
     if auto_export is None:
         auto_export = AUTO_EXPORT
-    if export_dir is None:
-        export_dir = EXPORT_DIR
 
     if auto_export:
         # 優先用 final state，若為空則從 JSONL log fallback 讀取
