@@ -74,7 +74,9 @@ def _run_cmd(args: list[str], cwd: str | None = None) -> tuple[bool, str]:
             text=True,
             timeout=120,
         )
-        return result.returncode == 0, (result.stdout or "").strip()
+        # stdout + stderr 都回傳，確保錯誤訊息可見
+        output = ((result.stdout or "") + (result.stderr or "")).strip()
+        return result.returncode == 0, output
     except Exception as e:
         return False, str(e)
 
@@ -200,8 +202,9 @@ def main() -> None:
     forced = result.get("forced", 0)
     task_results = result.get("task_results", [])
 
-    # 產生每個 task 的測試摘要
+    # 產生每個 task 的測試摘要（含折疊的 pytest 原始輸出）
     task_lines = []
+    test_details = []
     for r in task_results:
         if r.get("forced"):
             icon = "⚠️"
@@ -214,6 +217,14 @@ def main() -> None:
             status = "FAIL"
         task_lines.append(f"| {r.get('task_id')} | {icon} {status} | {r.get('feedback', '')[:80]} |")
 
+        # 加入 pytest 原始輸出（折疊）
+        raw_output = r.get("test_output", "").strip()
+        if raw_output:
+            test_details.append(
+                f"<details>\n<summary>Task {r.get('task_id')} {icon} pytest 輸出</summary>\n\n"
+                f"```\n{raw_output[:3000]}\n```\n</details>"
+            )
+
     task_table = ""
     if task_lines:
         task_table = (
@@ -222,6 +233,10 @@ def main() -> None:
             "|------|------|------|\n"
             + "\n".join(task_lines)
         )
+
+    test_details_section = ""
+    if test_details:
+        test_details_section = "\n\n### pytest 詳細輸出\n\n" + "\n\n".join(test_details)
 
     # 檢查是否有 Playwright artifacts
     artifacts_dir = os.path.join(os.path.dirname(export_dir) if export_dir else ".", "test_artifacts")
@@ -239,6 +254,7 @@ def main() -> None:
             f"**結果：** {passed}/{total} tasks passed"
             + (f"，{forced} forced（品質未驗證）" if forced else "")
             + task_table
+            + test_details_section
             + artifacts_note
             + f"\n\nCloses #{issue_number}"
         )
@@ -249,6 +265,7 @@ def main() -> None:
             f"**結果：** {passed}/{total} tasks passed"
             + (f"，{forced} forced" if forced else "")
             + task_table
+            + test_details_section
             + artifacts_note
             + "\n\n請手動建立 PR。"
         )
