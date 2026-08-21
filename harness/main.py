@@ -64,8 +64,7 @@ def run_harness(user_input: str, log_dir: str = ".", auto_export: bool | None = 
                     completed_code=completed_code,
                     task_results=task_results,
                     project_name=project_name,
-                    include_tests=EXPORT_TESTS,
-                    overwrite=True,  # 覆寫現有檔案，否則修改不會生效
+                    include_tests=EXPORT_TESTS
                 )
             except Exception as e:
                 print(f"⚠️  Export failed: {e}")
