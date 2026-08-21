@@ -9,7 +9,7 @@ from harness.config import AUTO_EXPORT, EXPORT_DIR, EXPORT_TESTS, GIT_ENABLED
 from harness.utils.git_manager import setup_git_worktree
 
 
-def run_harness(user_input: str, log_dir: str = ".", auto_export: bool | None = None, export_dir: str | None = None) -> HarnessRunResult:
+def run_harness(user_input: str, log_dir: str = ".", auto_export: bool | None = None, export_dir: str | None = None, git_slug: str | None = None) -> HarnessRunResult:
     graph = build_graph()
     run_log_path = init_run_log(log_dir)
     if export_dir is None:
@@ -69,11 +69,11 @@ def run_harness(user_input: str, log_dir: str = ".", auto_export: bool | None = 
             except Exception as e:
                 print(f"⚠️  Export failed: {e}")
 
-    # Git worktree
+    # Git worktree — 用 git_slug（若有）避免 body 的 HTML 雜訊污染 branch 名稱
     git_branch = None
     git_worktree_path = None
     if auto_export and project_path and GIT_ENABLED:
-        git_result = setup_git_worktree(project_path, user_input)
+        git_result = setup_git_worktree(project_path, git_slug or user_input)
         if git_result["success"]:
             git_branch = git_result["branch"]
             git_worktree_path = git_result["worktree_path"]

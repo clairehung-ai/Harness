@@ -152,17 +152,20 @@ def main() -> None:
     issue_number = issue["number"]
     export_dir = issue["export_dir"]
     user_input = build_user_input(issue["title"], issue["body"])
-    # 確保 user_input 含英數字以產生有意義的 git branch slug
-    # 中文標題會被 slugify 過濾掉，加上 issue 編號作為保底
+
+    # slug 只用 issue 編號，不用 body（body 可能含 HTML 圖片等雜訊）
     slug_prefix = f"issue-{issue_number}"
     if slug_prefix not in user_input:
         user_input = f"{slug_prefix} {user_input}"
+
+    # worktree branch 用乾淨的 slug_input，只含 title + issue 號碼
+    slug_input = f"issue-{issue_number} {issue['title']}"
 
     print(f"🚀 Running Harness for Issue #{issue_number}: {issue['title']}")
 
     # 執行 Harness
     try:
-        result = run_harness(user_input=user_input, export_dir=export_dir)
+        result = run_harness(user_input=user_input, export_dir=export_dir, git_slug=slug_input)
     except Exception as e:
         print(f"❌ Harness 執行失敗：{e}")
         comment_on_issue(
