@@ -159,3 +159,33 @@ def test_main_harness_failure_comments_on_issue(tmp_path):
     call_args = mock_comment.call_args
     comment_msg = call_args[1].get("message") or call_args[0][2]
     assert any(word in comment_msg for word in ["失敗", "error", "LLM timeout", "failed", "Error"])
+
+
+# ── Issue #4: _run_cmd 應回傳 stderr ──────────────────────────────────────────
+
+def test_run_cmd_returns_stderr_on_failure():
+    """_run_cmd 失敗時，output 應包含 stderr 內容"""
+    from harness.github_runner import _run_cmd
+    with patch("harness.github_runner.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(
+            returncode=1,
+            stdout="",
+            stderr="gh: error: pull request already exists"
+        )
+        ok, output = _run_cmd(["gh", "pr", "create"])
+    assert ok is False
+    assert "pull request already exists" in output
+
+
+def test_run_cmd_returns_stdout_and_stderr_combined():
+    """_run_cmd 成功時，output 包含 stdout；失敗時包含 stdout + stderr"""
+    from harness.github_runner import _run_cmd
+    with patch("harness.github_runner.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout="https://github.com/owner/repo/pull/1",
+            stderr=""
+        )
+        ok, output = _run_cmd(["gh", "pr", "create"])
+    assert ok is True
+    assert "https://github.com" in output
