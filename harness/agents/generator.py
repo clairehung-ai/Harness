@@ -1,7 +1,7 @@
 ﻿import re, json
 from pathlib import Path
 from langchain_openai import ChatOpenAI
-from harness.config import MODEL, LLM_BASE_URL, LLM_API_KEY, LLM_MAX_TOKENS, MAX_RED_LIGHT_ROUNDS
+from harness.config import call_llm_with_retry, MAX_RED_LIGHT_ROUNDS
 from harness.state import HarnessState
 from harness.skills.base_runner import detect_test_type, get_runner
 
@@ -9,9 +9,7 @@ def _load_prompt() -> str:
     return (Path(__file__).parent.parent / "prompts" / "generator.md").read_text(encoding="utf-8")
 
 def call_llm(prompt: str) -> str:
-    return ChatOpenAI(
-        model=MODEL, base_url=LLM_BASE_URL, api_key=LLM_API_KEY, temperature=0, max_tokens=LLM_MAX_TOKENS
-    ).invoke(prompt).content
+    return call_llm_with_retry(prompt)
 
 def _extract_block(text: str, label: str) -> str:
     m = re.search(rf"```{label}\n(.*?)```", text, re.DOTALL)
@@ -48,9 +46,7 @@ def _load_test_writer_prompt() -> str:
     return (Path(__file__).parent.parent / "prompts" / "test_writer.md").read_text(encoding="utf-8")
 
 def call_test_writer_llm(prompt: str) -> str:
-    return ChatOpenAI(
-        model=MODEL, base_url=LLM_BASE_URL, api_key=LLM_API_KEY, temperature=0, max_tokens=LLM_MAX_TOKENS
-    ).invoke(prompt).content
+    return call_llm_with_retry(prompt)
 
 def test_writer_node(state: HarnessState) -> dict:
     task = state["tasks"][state["current_task_index"]]
@@ -113,9 +109,7 @@ def _load_code_writer_prompt() -> str:
     return (Path(__file__).parent.parent / "prompts" / "code_writer.md").read_text(encoding="utf-8")
 
 def call_code_writer_llm(prompt: str) -> str:
-    return ChatOpenAI(
-        model=MODEL, base_url=LLM_BASE_URL, api_key=LLM_API_KEY, temperature=0, max_tokens=LLM_MAX_TOKENS
-    ).invoke(prompt).content
+    return call_llm_with_retry(prompt)
 
 def _format_completed_code(completed_code: dict) -> str:
     """將 completed_code dict 格式化為 prompt 可讀的字串。"""
@@ -127,8 +121,34 @@ def _format_completed_code(completed_code: dict) -> str:
     return "\n\n".join(parts)
 
 
+def _load_existing_file(export_dir: str, output_filename: str) -> str:
+    """若目標檔案在現有專案中已存在，讀取其內容供 code_writer 參考。"""
+    if not export_dir or not output_filename:
+        return ""
+    target = Path(export_dir) / output_filename
+    if target.exists() and target.is_file():
+        try:
+            return target.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            return ""
+    return ""
+
+
 def code_writer_node(state: HarnessState) -> dict:
     task = state["tasks"][state["current_task_index"]]
+    output_filename = task.get("output_filename", "solution.py")
+    export_dir = state.get("export_dir", "")
+
+    # 讀取現有檔案內容，讓 code_writer 在既有 code 上修改而非從頭建立
+    existing_content = _load_existing_file(export_dir, output_filename)
+    existing_file_section = (
+        f"## 現有檔案內容（`{output_filename}`）\n\n"
+        f"以下是目標檔案目前的完整內容。你必須在此基礎上修改，而不是從頭建立：\n\n"
+        f"```python\n{existing_content}\n```\n"
+        if existing_content else
+        "## 現有檔案內容\n\n（此檔案尚不存在，請從頭建立）\n"
+    )
+
     prompt = (
         _load_code_writer_prompt()
         .replace("{{overall_goal}}", state["overall_goal"])
@@ -136,10 +156,11 @@ def code_writer_node(state: HarnessState) -> dict:
         .replace("{{task_description}}", task["task_description"])
         .replace("{{expected_output}}", task["expected_output"])
         .replace("{{test_type}}", task.get("test_type", "unit"))
-        .replace("{{output_filename}}", task.get("output_filename", "solution.py"))
+        .replace("{{output_filename}}", output_filename)
         .replace("{{current_tests}}", state["current_tests"])
         .replace("{{completed_code}}", _format_completed_code(state.get("completed_code", {})))
         .replace("{{evaluator_feedback}}", state["evaluator_feedback"] or "None")
+        .replace("{{existing_file_content}}", existing_file_section)
     )
     raw = call_code_writer_llm(prompt)
     code = _extract_block(raw, "implementation")
