@@ -84,6 +84,7 @@ def red_light_check_node(state: HarnessState) -> dict:
         tests=state["current_tests"],
         completed_code=state.get("completed_code", {}),
         output_filename=task.get("output_filename", "solution.py"),
+        export_dir=state.get("export_dir", ""),
     )
     output = run_result["output"]
 
